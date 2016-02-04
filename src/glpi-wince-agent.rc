@@ -1,0 +1,16 @@
+//
+// Include
+//
+#include "glpi-wince-agent.h"
+//
+// Menu
+//
+IDR_MAINMENU MENU DISCARDABLE
+BEGIN
+	POPUP "&Menu"
+	BEGIN
+		MENUITEM	"&Test",	IDM_MENU_TEST
+		MENUITEM	SEPARATOR
+		MENUITEM	"E&xit",	IDM_MENU_EXIT
+	END
+END

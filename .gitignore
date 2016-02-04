@@ -1,0 +1,4 @@
+env.sh
+*.o
+*.exe
+*.rsc
