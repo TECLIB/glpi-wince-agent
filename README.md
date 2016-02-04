@@ -1,4 +1,4 @@
-= Very light GLPI agent for Windows CE =
+# Very light GLPI agent for Windows CE
 
 It will try to retreive the following informations and send them back to GLPI
 server:
