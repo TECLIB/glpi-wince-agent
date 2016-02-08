@@ -18,7 +18,9 @@ provides a WinCE emulator on which we can test the software. It can be started u
 1. Install [Windows Mobile 6 Professional Images](https://www.microsoft.com/en-us/download/details.aspx?id=7974)
    - SHA1: `1dcc6a95e949ae776143357d197d1a7a6e137539  Windows Mobile 6 Professional Images (USA).msi`
    - Run: `wine msiexec /i "Windows Mobile 6 Professional Images (USA).msi"`
-    
+
+1. Start emulator launcher test script:
+   - Run: `wineconsole --backend=curses test/emulator.bat`
 
 ## Other resources
  - [Shared Source Microsoft Device Emulator 1.0 Release](https://www.microsoft.com/en-us/download/details.aspx?id=10865)
