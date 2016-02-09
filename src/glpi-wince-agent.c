@@ -36,10 +36,14 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int 
 	WNDCLASS	WndCls;
 	HWND		hWnd;
 	MSG			Msg;
+	LPTSTR		wAgentName;
 
 	Init();
 
 	hi = hInstance;
+
+	wAgentName = allocate((strlen(AgentName)+1)*2, "wAgentName");
+	wsprintf( wAgentName, L"%hs", AgentName );
 
 	WndCls.style			= CS_HREDRAW | CS_VREDRAW;
 	WndCls.lpfnWndProc		= WndProcedure;
@@ -54,7 +58,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int 
 
 	RegisterClass(&WndCls);
 
-	hWnd = CreateWindow(ClassName, AgentName, WS_OVERLAPPEDWINDOW, 0, 0,
+	hWnd = CreateWindow(ClassName, wAgentName, WS_OVERLAPPEDWINDOW, 0, 0,
 			CW_USEDEFAULT, CW_USEDEFAULT,
 			NULL, NULL,
 			hInstance,
@@ -70,6 +74,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int 
 		TranslateMessage(&Msg);
 		DispatchMessageW(&Msg);
 	}
+
+	free(wAgentName);
 
 	return Msg.wParam;
 
@@ -89,6 +95,7 @@ LRESULT CALLBACK WndProcedure(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 		case WM_SHOWWINDOW:
 			break;
 		case WM_DESTROY:
+			Quit();
 			PostQuitMessage(WM_QUIT);
 			break;
 		case WM_COMMAND:
@@ -106,7 +113,7 @@ void DoMenuActions(HWND w, INT id)
 	switch (id) {
 		case IDM_MENU_EXIT:
 			Quit();
-			PostQuitMessage(0);
+			PostQuitMessage(WM_QUIT);
 			break;
 		case IDM_MENU_RUN:
 			Run();

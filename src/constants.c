@@ -25,7 +25,8 @@
 #include "glpi-wince-agent.h"
 
 const WCHAR *ClassName  = L"GLPI-wince-Agent";
-const WCHAR *AgentName  = L"GLPI-Agent v"VERSION;
 
-const char *InstallPath = "\\Program Files\\GLPI-wince-Agent" ;
-const char *ConfigFile  = "glpi-wince-agent.conf";
+LPCSTR AgentName  = "GLPI-Agent v"VERSION;
+
+LPCSTR InstallPath = "\\Program Files\\GLPI-wince-Agent" ;
+LPCSTR ConfigFile  = "glpi-wince-agent.conf";

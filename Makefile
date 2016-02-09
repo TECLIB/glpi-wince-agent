@@ -2,7 +2,7 @@
 MAKE = make
 
 all:
-	@$(MAKE) -w -C src strip STATIC=-s
+	@$(MAKE) -w -C src strip STATIC=-static
 
 debug:
 	@$(MAKE) -w -C src DEBUG=-DDEBUG

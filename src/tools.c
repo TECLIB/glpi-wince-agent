@@ -24,28 +24,25 @@
 
 #include "glpi-wince-agent.h"
 
-char message[128]; 
-
-ULONG allocate(void *pointer, ULONG size, const char* reason )
+void *allocate(ULONG size, LPCSTR reason )
 {
-	ULONG allocated = 0 ;
-	message[0] = '\0' ;
+	void *pointer = NULL;
 
-	if (size <= 0) {
-		sprintf(message, "[%s] Won't try to allocate %li bytes", reason, size);
-		Error((const char *)message);
+	if (size == 0) {
+		Error("[%s] No need to allocate memory", reason);
 	} else {
 		// Allocate memory from sizing information
-		if ((pointer = (void *) GlobalAlloc(GPTR, size)) == NULL)
+		if ((pointer = malloc(size)) == NULL)
 		{
-			sprintf(message, "[%s] Can't allocate %li bytes", reason, size);
-			Error((const char *)message);
-		} else {
-			if (debugMode>1) {
-				sprintf(message, "[%s] Allocated %li bytes", reason, size);
-				Debug2((const char *)message);
-			}
+			Error("[%s] Can't allocate %lu bytes", reason, size);
+			exit(EXIT_FAILURE);
 		}
+#ifdef DEBUG
+		else
+		{
+			Debug2("[%s] Allocated %i bytes", reason, size);
+		}
+#endif
 	}
-	return allocated;
+	return pointer;
 }

@@ -24,4 +24,4 @@
 
 #include "glpi-wince-agent.h"
 
-int debugMode = 0 ;
+int debugMode = 2 ;

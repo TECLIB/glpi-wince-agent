@@ -21,12 +21,42 @@
  */
 
 #include <windows.h>
+#include <libgen.h>
 
 #include "glpi-wince-agent.h"
 
+LPSTR FileName = NULL;
+LPSTR CurrentPath = NULL;
+
 void Init(void)
 {
-	LoggerInit();
+	int buflen = 0 ;
+	LPWSTR wFileName = NULL;
+
+	wFileName = allocate( 2*(MAX_PATH+1), "wFileName" );
+	if (!GetModuleFileNameW(NULL, wFileName, MAX_PATH))
+	{
+		MessageBox( NULL, L"Can't get filename", L"Agent Init", MB_OK | MB_ICONINFORMATION );
+	}
+	buflen = wcslen(wFileName) + 1;
+
+	// Compute filename & currentpath from program path
+	FileName = allocate( buflen, "FileName" );
+	CurrentPath = allocate( buflen, "CurrentPath" );
+	wcstombs(FileName, wFileName, buflen);
+	strcpy(CurrentPath, FileName);
+	CurrentPath = dirname(CurrentPath);
+	free(wFileName);
+
+	LoggerInit(CurrentPath);
+
+	Log("%s started", AgentName);
+
+#ifdef DEBUG
+	Debug2("MAX_PATH=%lu", MAX_PATH);
+	Debug2("FileName: %s", FileName);
+	Debug2("CurrentPath: %hs", CurrentPath);
+#endif
 }
 
 void Run(void)
@@ -36,6 +66,8 @@ void Run(void)
 
 void Quit(void)
 {
+	free(FileName);
+	free(CurrentPath);
 	Log( "Quitting..." );
 	LoggerQuit();
 }

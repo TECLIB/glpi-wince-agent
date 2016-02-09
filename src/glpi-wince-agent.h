@@ -21,9 +21,9 @@ int debugMode;
  * constants.c
  */
 const WCHAR *ClassName;
-const WCHAR *AgentName;
-const char  *InstallPath;
-const char  *ConfigFile;
+LPCSTR AgentName;
+LPCSTR InstallPath;
+LPCSTR ConfigFile;
 
 /*
  * inventory.c
@@ -32,12 +32,12 @@ const char  *ConfigFile;
 /*
  * logger.c
  */
-void LoggerInit(void);
+void LoggerInit(LPCSTR path);
 void LoggerQuit(void);
-void Log(const char *message);
-void Error(const char *message);
-void Debug(const char *message);
-void Debug2(const char *message);
+void Log(LPCSTR format, ...);
+void Error(LPCSTR format, ...);
+void Debug(LPCSTR format, ...);
+void Debug2(LPCSTR format, ...);
 
 /*
  * target.c
@@ -46,3 +46,4 @@ void Debug2(const char *message);
 /*
  * tools.c
  */
+void *allocate(ULONG size, LPCSTR reason );
