@@ -10,15 +10,17 @@ LIBS    = -lcommctrl
 STATIC  = 
 DEBUG   = 
 
+OBJECTS = glpi-wince-agent.o agent.o config.o constants.o logger.o tools.o
+
 all: glpi-wince-agent.exe
 
 strip: glpi-wince-agent.exe
 	${STRIP} $?
 
-glpi-wince-agent.exe: glpi-wince-agent.o glpi-wince-agent.rsc
-	${CC} ${CFLAGS} -o $@ glpi-wince-agent.o glpi-wince-agent.rsc ${LIBS}
+glpi-wince-agent.exe: ${OBJECTS} glpi-wince-agent.rsc
+	${CC} ${CFLAGS} -o $@ ${OBJECTS} glpi-wince-agent.rsc ${LIBS}
 
-glpi-wince-agent.o: glpi-wince-agent.c
+%.o: %.c
 	${CC} ${CFLAGS} -c $?
 
 glpi-wince-agent.rsc: glpi-wince-agent.rc glpi-wince-agent.h

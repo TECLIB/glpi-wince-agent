@@ -31,27 +31,13 @@ void DoMenuActions(HWND w, INT id);
 
 HINSTANCE	hi;
 
-FILE *hStdout;
-FILE *hStderr;
-
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
 {
 	WNDCLASS	WndCls;
 	HWND		hWnd;
 	MSG			Msg;
 
-	const WCHAR	*ClsName = L"GLPI-wince-Agent";
-	const WCHAR	*WndName = L"GLPI-wince-Agent v"VERSION;
-
-	/* Reassign "stderr" & "stdout" */
-	hStdout = freopen( "glpi-wince-agent.log", "w", stdout );
-	hStderr = freopen( "glpi-wince-agent-stderr.log", "w", stderr );
-
-	if( hStdout == NULL )
-		fprintf( stdout, "error while freopen on STDOUT\n" );
-
-	if( hStderr == NULL )
-		fprintf( stdout, "error while freopen on STDERR\n" );
+	Init();
 
 	hi = hInstance;
 
@@ -63,12 +49,12 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int 
 	WndCls.hCursor			= NULL;
 	WndCls.hbrBackground	= (HBRUSH)GetStockObject(WHITE_BRUSH);
 	WndCls.lpszMenuName		= NULL;
-	WndCls.lpszClassName	= ClsName;
+	WndCls.lpszClassName	= ClassName;
 	WndCls.hInstance		= hInstance;
 
 	RegisterClass(&WndCls);
 
-	hWnd = CreateWindow(ClsName, WndName, WS_OVERLAPPEDWINDOW, 0, 0,
+	hWnd = CreateWindow(ClassName, AgentName, WS_OVERLAPPEDWINDOW, 0, 0,
 			CW_USEDEFAULT, CW_USEDEFAULT,
 			NULL, NULL,
 			hInstance,
@@ -119,14 +105,11 @@ void DoMenuActions(HWND w, INT id)
 {
 	switch (id) {
 		case IDM_MENU_EXIT:
-			if( hStdout != NULL )
-				fclose( hStdout );
-			if( hStderr != NULL )
-				fclose( hStderr );
+			Quit();
 			PostQuitMessage(0);
 			break;
-		case IDM_MENU_TEST:
-			fprintf( stdout, "Test menu selected\n" );
+		case IDM_MENU_RUN:
+			Run();
 			break;
 	}
 }
