@@ -27,7 +27,6 @@
 
 LPSYSTEMTIME lpLocalTime = NULL;
 
-// TODO: handle expiration for local variables
 LPSTR sHostname = NULL;
 PFIXED_INFO pFixedInfo = NULL;
 
@@ -56,10 +55,11 @@ void *allocate(ULONG size, LPCSTR reason )
 
 static PFIXED_INFO getNetworkParams(void)
 {
+	static DWORD expiration = 0;
 	DWORD	Err = 0, FixedInfoSize = 0;
 
-	if (pFixedInfo != NULL)
-		return;
+	if (pFixedInfo != NULL && GetTickCount() <= expiration)
+		return pFixedInfo;
 
 	/*
 	 *  Get the main IP configuration information for this machine using
@@ -75,6 +75,7 @@ static PFIXED_INFO getNetworkParams(void)
 	}
 
 	// Allocate memory
+	free(pFixedInfo);
 	pFixedInfo = allocate(FixedInfoSize, "GetNetworkParams");
 
 	// Retreive network params
@@ -83,22 +84,27 @@ static PFIXED_INFO getNetworkParams(void)
 		Abort();
 	}
 
+	expiration = GetTickCount() - dwStartTick + EXPIRATION_DELAY;
+
 	return pFixedInfo;
 }
 
 LPSTR getHostname(void)
 {
+	static DWORD expiration = 0;
 	int buflen = 1;
 
-	if (sHostname == NULL)
+	if (sHostname == NULL || GetTickCount() > expiration)
 	{
-		if (pFixedInfo == NULL)
-			getNetworkParams();
+		getNetworkParams();
 
 		// Allocate memory & copy hostname
+		free(sHostname);
 		buflen += strlen(pFixedInfo->HostName);
 		sHostname = allocate( buflen, "Hostname");
 		strcpy( sHostname, pFixedInfo->HostName);
+
+		expiration = GetTickCount() - dwStartTick + EXPIRATION_DELAY;
 	}
 
 	return sHostname;

@@ -29,6 +29,8 @@ LPSTR FileName = NULL;
 LPSTR CurrentPath = NULL;
 LPSTR DeviceID = NULL;
 
+DWORD dwStartTick = 0;
+
 // local functions
 static LPSTR computeDeviceID(void);
 
@@ -36,6 +38,8 @@ void Init(void)
 {
 	int buflen = 0 ;
 	LPWSTR wFileName = NULL;
+
+	dwStartTick = GetTickCount();
 
 	wFileName = allocate( 2*(MAX_PATH+1), "wFileName" );
 	if (!GetModuleFileNameW(NULL, wFileName, MAX_PATH))

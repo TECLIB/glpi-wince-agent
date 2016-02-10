@@ -5,6 +5,9 @@
 #define IDM_MENU_EXIT	201
 #define IDM_MENU_RUN	202
 
+// Define expiration delay to 10 minutes related to GetTickCount() API
+#define EXPIRATION_DELAY  (DWORD)600000
+
 /*
  * agent.c
  */
@@ -51,6 +54,7 @@ void Debug2(LPCSTR format, ...);
 /*
  * tools.c
  */
+DWORD dwStartTick;
 void *allocate(ULONG size, LPCSTR reason );
 void ToolsQuit(void);
 LPSTR getHostname(void);
