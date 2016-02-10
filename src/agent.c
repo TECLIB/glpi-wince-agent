@@ -66,7 +66,10 @@ void Init(void)
 	Debug2("CurrentPath: %hs", CurrentPath);
 #endif
 
-	// Storage: use CurrentPath
+	/*
+	 *  Storage path: APPDATA\AppName or CurrentPath\var
+	 */
+	StorageInit(CurrentPath);
 
 	// TODO: implement loadState as it can provide still computed DeviceID
 	DeviceID = computeDeviceID();
@@ -86,6 +89,7 @@ void Quit(void)
 	free(DeviceID);
 
 	Log( "Quitting..." );
+	StorageQuit();
 	ToolsQuit();
 	LoggerQuit();
 }

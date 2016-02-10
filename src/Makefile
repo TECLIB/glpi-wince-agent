@@ -10,7 +10,7 @@ LIBS    = -lcommctrl -liphlpapi
 STATIC  = 
 DEBUG   = 
 
-OBJECTS = glpi-wince-agent.o agent.o config.o constants.o logger.o tools.o
+OBJECTS = glpi-wince-agent.o agent.o config.o constants.o logger.o tools.o storage.o
 
 all: glpi-wince-agent.exe
 

@@ -170,6 +170,9 @@ void Error(LPCSTR format, ...)
 		fprintf( stderr, "Error : %s\n", lpLogBuffer );
 		if (getSystemError(FREEBUFFER) != NULL)
 			fprintf( stdout, "Last system error: %s\n", lpErrorBuf);
+#ifdef DEBUG
+		Debug2("Errno: %d", GetLastError());
+#endif
 	}
 	else
 	{

@@ -37,6 +37,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int 
 	HWND		hWnd;
 	MSG			Msg;
 	LPTSTR		wAgentName;
+	LPTSTR		wClassName;
 
 	Init();
 
@@ -44,6 +45,9 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int 
 
 	wAgentName = allocate((strlen(AgentName)+1)*2, "wAgentName");
 	wsprintf( wAgentName, L"%hs", AgentName );
+
+	wClassName = allocate((strlen(AppName)+1)*2, "wClassName");
+	wsprintf( wClassName, L"%hs", AppName );
 
 	WndCls.style			= CS_HREDRAW | CS_VREDRAW;
 	WndCls.lpfnWndProc		= WndProcedure;
@@ -53,12 +57,12 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int 
 	WndCls.hCursor			= NULL;
 	WndCls.hbrBackground	= (HBRUSH)GetStockObject(WHITE_BRUSH);
 	WndCls.lpszMenuName		= NULL;
-	WndCls.lpszClassName	= ClassName;
+	WndCls.lpszClassName	= wClassName;
 	WndCls.hInstance		= hInstance;
 
 	RegisterClass(&WndCls);
 
-	hWnd = CreateWindow(ClassName, wAgentName, WS_OVERLAPPEDWINDOW, 0, 0,
+	hWnd = CreateWindow(wClassName, wAgentName, WS_OVERLAPPEDWINDOW, 0, 0,
 			CW_USEDEFAULT, CW_USEDEFAULT,
 			NULL, NULL,
 			hInstance,
@@ -76,6 +80,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int 
 	}
 
 	free(wAgentName);
+	free(wClassName);
 
 	return Msg.wParam;
 

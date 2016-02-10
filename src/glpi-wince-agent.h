@@ -23,10 +23,11 @@ int debugMode;
 /*
  * constants.c
  */
-const WCHAR *ClassName;
+LPCSTR AppName;
 LPCSTR AgentName;
 LPCSTR InstallPath;
 LPCSTR ConfigFile;
+LPCSTR DefaultVarDir;
 
 /*
  * glpi-wince-agent.c
@@ -46,6 +47,12 @@ void Log(LPCSTR format, ...);
 void Error(LPCSTR format, ...);
 void Debug(LPCSTR format, ...);
 void Debug2(LPCSTR format, ...);
+
+/*
+ * storage.c
+ */
+void StorageInit(LPCSTR path);
+void StorageQuit(void);
 
 /*
  * target.c
