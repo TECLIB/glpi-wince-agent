@@ -26,6 +26,11 @@ LPCSTR InstallPath;
 LPCSTR ConfigFile;
 
 /*
+ * glpi-wince-agent.c
+ */
+void Abort(void);
+
+/*
  * inventory.c
  */
 
@@ -47,3 +52,6 @@ void Debug2(LPCSTR format, ...);
  * tools.c
  */
 void *allocate(ULONG size, LPCSTR reason );
+void ToolsQuit(void);
+LPSTR getHostname(void);
+LPSYSTEMTIME getLocalTime(void);

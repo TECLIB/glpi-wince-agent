@@ -27,16 +27,19 @@
 
 #define LOGBUFFERSIZE 1024
 
+#define KEEPBUFFER TRUE
+#define FREEBUFFER FALSE
+
 FILE *hLogger;
 
 LPSTR lpLogBuffer = NULL;
 LPSTR lpErrorBuf = NULL;
+LPTSTR lpMsgBuf = NULL;
 
 BOOLEAN bLoggerInit = FALSE; 
 
-LPVOID GetSystemError(void)
+static LPVOID getSystemError(BOOLEAN freeBuffer)
 {
-	LPTSTR lpMsgBuf = NULL;
 	int buflen = 0;
 
 	free(lpErrorBuf);
@@ -60,7 +63,8 @@ LPVOID GetSystemError(void)
 		lpErrorBuf = allocate( buflen, "Error buffer");
 		wcstombs(lpErrorBuf, lpMsgBuf, buflen);
 
-		LocalFree( lpMsgBuf );
+		if (freeBuffer)
+			LocalFree( lpMsgBuf );
 	}
 
 	return lpErrorBuf;
@@ -84,10 +88,11 @@ void LoggerInit(LPCSTR path)
 	if( hLogger == NULL )
 	{
 		Error( "Can't reopen stdout toward file" );
-		if (GetSystemError() != NULL)
+		if (getSystemError(KEEPBUFFER) != NULL)
 		{
 			fprintf( stdout, "Error reopening stdout: %s\n", lpErrorBuf);
-			//MessageBox( NULL, (LPCTSTR)lpMsgBuf, L"LoggerInit", MB_OK | MB_ICONINFORMATION );
+			MessageBox( NULL, (LPCTSTR)lpMsgBuf, L"LoggerInit", MB_OK | MB_ICONINFORMATION );
+			LocalFree( lpMsgBuf );
 		}
 	}
 
@@ -113,6 +118,7 @@ void LoggerQuit(void)
 	// Free buffers
 	free(lpErrorBuf);
 	free(lpLogBuffer);
+	free(lpMsgBuf);
 }
 
 void Log(LPCSTR format, ...)
@@ -132,7 +138,7 @@ void Log(LPCSTR format, ...)
 		fprintf( stdout, "Info  : %s\n", lpLogBuffer );
 	else
 	{
-		if (GetSystemError() != NULL)
+		if (getSystemError(FREEBUFFER) != NULL)
 			fprintf( stdout, "Error with '%s' format, %s\n", format, lpErrorBuf);
 		else
 			fprintf( stdout, "Error with '%s' format\n", format);
@@ -162,12 +168,12 @@ void Error(LPCSTR format, ...)
 	{
 		fprintf( stdout, "Error : %s\n", lpLogBuffer );
 		fprintf( stderr, "Error : %s\n", lpLogBuffer );
-		if (GetSystemError() != NULL)
+		if (getSystemError(FREEBUFFER) != NULL)
 			fprintf( stdout, "Last system error: %s\n", lpErrorBuf);
 	}
 	else
 	{
-		if (GetSystemError() != NULL)
+		if (getSystemError(FREEBUFFER) != NULL)
 			fprintf( stdout, "Error with '%s' format, %s\n", format, lpErrorBuf);
 		else
 			fprintf( stdout, "Error with '%s' format\n", format);

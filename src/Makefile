@@ -6,7 +6,7 @@ CC      = ${ARCH}-gcc
 WINDRES = ${ARCH}-windres
 STRIP   = ${ARCH}-strip
 CFLAGS  = -g ${STATIC} ${DEBUG} -Wall -DWIN32 -D_WIN32_WINNT=0x0501
-LIBS    = -lcommctrl
+LIBS    = -lcommctrl -liphlpapi
 STATIC  = 
 DEBUG   = 
 

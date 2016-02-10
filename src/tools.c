@@ -21,8 +21,15 @@
  */
 
 #include <windows.h>
+#include <iphlpapi.h>
 
 #include "glpi-wince-agent.h"
+
+LPSYSTEMTIME lpLocalTime = NULL;
+
+// TODO: handle expiration for local variables
+LPSTR sHostname = NULL;
+PFIXED_INFO pFixedInfo = NULL;
 
 void *allocate(ULONG size, LPCSTR reason )
 {
@@ -35,7 +42,7 @@ void *allocate(ULONG size, LPCSTR reason )
 		if ((pointer = malloc(size)) == NULL)
 		{
 			Error("[%s] Can't allocate %lu bytes", reason, size);
-			exit(EXIT_FAILURE);
+			Abort();
 		}
 #ifdef DEBUG
 		else
@@ -45,4 +52,69 @@ void *allocate(ULONG size, LPCSTR reason )
 #endif
 	}
 	return pointer;
+}
+
+static PFIXED_INFO getNetworkParams(void)
+{
+	DWORD	Err = 0, FixedInfoSize = 0;
+
+	if (pFixedInfo != NULL)
+		return;
+
+	/*
+	 *  Get the main IP configuration information for this machine using
+	 * the FIXED_INFO structure
+	 */
+	if ((Err = GetNetworkParams(NULL, &FixedInfoSize)) != 0)
+	{
+		if ((Err != ERROR_BUFFER_OVERFLOW) && (Err != ERROR_INSUFFICIENT_BUFFER))
+		{
+			Error("GetNetworkParams() sizing failed with error %lu\n", Err);
+			Abort();
+		}
+	}
+
+	// Allocate memory
+	pFixedInfo = allocate(FixedInfoSize, "GetNetworkParams");
+
+	// Retreive network params
+	if ((Err = GetNetworkParams(pFixedInfo, &FixedInfoSize)) != 0) {
+		Error("GetNetworkParams() failed with error code %lu\n", Err);
+		Abort();
+	}
+
+	return pFixedInfo;
+}
+
+LPSTR getHostname(void)
+{
+	int buflen = 1;
+
+	if (sHostname == NULL)
+	{
+		if (pFixedInfo == NULL)
+			getNetworkParams();
+
+		// Allocate memory & copy hostname
+		buflen += strlen(pFixedInfo->HostName);
+		sHostname = allocate( buflen, "Hostname");
+		strcpy( sHostname, pFixedInfo->HostName);
+	}
+
+	return sHostname;
+}
+
+LPSYSTEMTIME getLocalTime(void)
+{
+	free(lpLocalTime);
+	lpLocalTime = allocate(sizeof(SYSTEMTIME), "LocalTime");
+	GetLocalTime(lpLocalTime);
+	return lpLocalTime;
+}
+
+void ToolsQuit(void)
+{
+	free(lpLocalTime);
+	free(pFixedInfo);
+	free(sHostname);
 }

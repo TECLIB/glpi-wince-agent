@@ -120,3 +120,11 @@ void DoMenuActions(HWND w, INT id)
 			break;
 	}
 }
+
+void Abort(void)
+{
+	Log("Aborting...");
+	Quit();
+	PostQuitMessage(WM_QUIT);
+	exit(EXIT_FAILURE);
+}

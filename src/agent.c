@@ -27,6 +27,10 @@
 
 LPSTR FileName = NULL;
 LPSTR CurrentPath = NULL;
+LPSTR DeviceID = NULL;
+
+// local functions
+static LPSTR computeDeviceID(void);
 
 void Init(void)
 {
@@ -57,6 +61,13 @@ void Init(void)
 	Debug2("FileName: %s", FileName);
 	Debug2("CurrentPath: %hs", CurrentPath);
 #endif
+
+	// Storage: use CurrentPath
+
+	// TODO: implement loadState as it can provide still computed DeviceID
+	DeviceID = computeDeviceID();
+	// TODO: implement saveState so we can keep DeviceID over the time
+	Debug2("Current DeviceID=%s", DeviceID);
 }
 
 void Run(void)
@@ -68,6 +79,39 @@ void Quit(void)
 {
 	free(FileName);
 	free(CurrentPath);
+	free(DeviceID);
+
 	Log( "Quitting..." );
+	ToolsQuit();
 	LoggerQuit();
+}
+
+static LPSTR computeDeviceID(void)
+{
+	int buflen = 21 ;
+	LPSTR hostname = NULL;
+	LPSYSTEMTIME lpSystemTime = NULL;
+
+	hostname = getHostname();
+	buflen += strlen(hostname);
+
+	DeviceID = allocate( buflen, "DeviceID");
+
+	lpSystemTime = getLocalTime();
+
+	if (sprintf( DeviceID, "%s-%02d-%02d-%02d-%02d-%02d-%02d", hostname,
+			lpSystemTime->wYear,
+			lpSystemTime->wMonth,
+			lpSystemTime->wDay,
+			lpSystemTime->wHour,
+			lpSystemTime->wMinute,
+			lpSystemTime->wSecond) > buflen)
+	{
+		Error("Bad computed DeviceID");
+		Abort();
+	}
+
+	Debug2("Computed DeviceID=%s", DeviceID);
+
+	return DeviceID;
 }
