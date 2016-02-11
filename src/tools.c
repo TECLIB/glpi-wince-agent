@@ -21,13 +21,12 @@
  */
 
 #include <windows.h>
-#include <iphlpapi.h>
 
 #include "glpi-wince-agent.h"
 
 LPSYSTEMTIME lpLocalTime = NULL;
 
-LPSTR sHostname = NULL;
+static LPSTR sHostname = NULL;
 PFIXED_INFO pFixedInfo = NULL;
 
 void *allocate(ULONG size, LPCSTR reason )
@@ -40,20 +39,24 @@ void *allocate(ULONG size, LPCSTR reason )
 		// Allocate memory from sizing information
 		if ((pointer = malloc(size)) == NULL)
 		{
-			Error("[%s] Can't allocate %lu bytes", reason, size);
+			if (reason != NULL)
+				Error("[%s] Can't allocate %lu bytes", reason, size);
+			else
+				Error("Can't allocate %lu bytes", size);
 			Abort();
 		}
 #ifdef DEBUG
 		else
 		{
-			Debug2("[%s] Allocated %i bytes", reason, size);
+			if (reason != NULL)
+				Debug2("[%s] Allocated %i bytes", reason, size);
 		}
 #endif
 	}
 	return pointer;
 }
 
-static PFIXED_INFO getNetworkParams(void)
+PFIXED_INFO getNetworkParams(void)
 {
 	static DWORD expiration = 0;
 	DWORD	Err = 0, FixedInfoSize = 0;

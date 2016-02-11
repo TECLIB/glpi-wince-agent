@@ -20,3 +20,42 @@
  * 
  */
 
+#include <windows.h>
+
+#include "glpi-wince-agent.h"
+
+INVENTORY *Inventory = NULL;
+
+void RunInventory(void)
+{
+	// Free any previously done inventory and allocate fresh memory
+	FreeInventory();
+	Inventory = allocate( sizeof(INVENTORY), "Inventory" );
+
+	// Get hostname
+	Inventory->name = getHostname();
+
+	// Get serialnumber
+	Inventory->serialnumber = getSerialNumber();
+
+	// Get ipaddress
+	Inventory->ipaddress = getIPAddress();
+
+	// Get ipaddress
+	Inventory->macaddress = getMACAddress();
+#ifdef DEBUG
+	Debug2("Found macaddress: %s", Inventory->macaddress);
+#endif
+}
+
+void FreeInventory(void)
+{
+	if (Inventory != NULL)
+	{
+		free(Inventory->name);
+		free(Inventory->serialnumber);
+		free(Inventory->ipaddress);
+		free(Inventory->macaddress);
+		free(Inventory);
+	}
+}

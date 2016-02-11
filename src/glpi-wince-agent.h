@@ -8,6 +8,8 @@
 // Define expiration delay to 10 minutes related to GetTickCount() API
 #define EXPIRATION_DELAY  (DWORD)600000
 
+#include <iphlpapi.h>
+
 /*
  * agent.c
  */
@@ -19,7 +21,11 @@ void Quit(void);
 /*
  * config.c
  */
-int debugMode;
+typedef struct {
+	int debug;
+} CONFIG;
+
+CONFIG conf;
 
 /*
  * constants.c
@@ -38,6 +44,28 @@ void Abort(void);
 /*
  * inventory.c
  */
+typedef struct {
+	LPSTR name;
+	LPSTR serialnumber;
+	LPSTR ipaddress;
+	LPSTR macaddress;
+} INVENTORY;
+
+INVENTORY *Inventory;
+
+void RunInventory(void);
+void FreeInventory(void);
+
+/*
+ * inventory/board.c
+ */
+LPSTR getSerialNumber(void);
+
+/*
+ * inventory/network.c
+ */
+LPSTR getIPAddress(void);
+LPSTR getMACAddress(void);
 
 /*
  * logger.c
@@ -68,5 +96,6 @@ void saveState(void);
 DWORD dwStartTick;
 void *allocate(ULONG size, LPCSTR reason );
 void ToolsQuit(void);
+PFIXED_INFO getNetworkParams(void);
 LPSTR getHostname(void);
 LPSYSTEMTIME getLocalTime(void);

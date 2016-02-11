@@ -85,10 +85,13 @@ void Init(void)
 void Run(void)
 {
 	Log( "Running..." );
+	RunInventory();
 }
 
 void Quit(void)
 {
+	FreeInventory();
+
 	free(FileName);
 	free(CurrentPath);
 	free(DeviceID);

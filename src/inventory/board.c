@@ -21,13 +21,13 @@
  */
 
 #include <windows.h>
+//#include <getdeviceuniqueid.h>
 
-#include "glpi-wince-agent.h"
+#include "../glpi-wince-agent.h"
 
-#ifndef DEBUG
-#define DEBUG 0
-#endif
+LPSTR getSerialNumber(void)
+{
+	LPSTR serialnumber = NULL;
 
-CONFIG conf = {
-	DEBUG, // Default debug mode
-};
+	return serialnumber;
+}

@@ -196,7 +196,7 @@ void Debug(LPCSTR format, ...)
 	va_list args;
 	va_start(args, format);
 
-	if (!debugMode || !bLoggerInit)
+	if (!conf.debug || !bLoggerInit)
 		return;
 
 	formatsize = strlen(format);
@@ -220,7 +220,7 @@ void Debug2(LPCSTR format, ...)
 	va_list args;
 	va_start(args, format);
 
-	if (debugMode<2 || !bLoggerInit)
+	if (conf.debug<2 || !bLoggerInit)
 		return;
 
 	formatsize = strlen(format);
@@ -244,7 +244,7 @@ void DebugError(LPCSTR format, ...)
 	va_list args;
 	va_start(args, format);
 
-	if (!debugMode || !bLoggerInit)
+	if (!conf.debug || !bLoggerInit)
 		return;
 
 	formatsize = strlen(format);

@@ -5,7 +5,7 @@ all:
 	@$(MAKE) -w -C src strip STATIC=-static
 
 debug:
-	@$(MAKE) -w -C src DEBUG=-DDEBUG
+	@$(MAKE) -w -C src DEBUG=-DDEBUG=2
 
 clean:
 	@$(MAKE) -w -C src clean

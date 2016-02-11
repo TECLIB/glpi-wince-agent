@@ -10,7 +10,8 @@ LIBS    = -lcommctrl -liphlpapi
 STATIC  = 
 DEBUG   = 
 
-OBJECTS = glpi-wince-agent.o agent.o config.o constants.o logger.o tools.o storage.o
+OBJECTS = glpi-wince-agent.o agent.o config.o constants.o logger.o tools.o \
+	storage.o inventory.o inventory/network.o  inventory/board.o
 
 all: glpi-wince-agent.exe
 
@@ -21,12 +22,12 @@ glpi-wince-agent.exe: ${OBJECTS} glpi-wince-agent.rsc
 	${CC} ${CFLAGS} -o $@ ${OBJECTS} glpi-wince-agent.rsc ${LIBS}
 
 %.o: %.c
-	${CC} ${CFLAGS} -c $?
+	${CC} ${CFLAGS} -c -o $@ $?
 
 glpi-wince-agent.rsc: glpi-wince-agent.rc glpi-wince-agent.h
 	${WINDRES} glpi-wince-agent.rc glpi-wince-agent.rsc
 
 clean:
-	@rm -vf *.o *.exe *.rsc
+	@rm -vf *.o *.exe *.rsc inventory/*.o
 
 .PHONY: all strip clean
