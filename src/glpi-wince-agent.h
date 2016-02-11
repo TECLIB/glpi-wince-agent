@@ -11,6 +11,7 @@
 /*
  * agent.c
  */
+LPSTR DeviceID;
 void Init(void);
 void Run(void);
 void Quit(void);
@@ -47,12 +48,15 @@ void Log(LPCSTR format, ...);
 void Error(LPCSTR format, ...);
 void Debug(LPCSTR format, ...);
 void Debug2(LPCSTR format, ...);
+void DebugError(LPCSTR format, ...);
 
 /*
  * storage.c
  */
 void StorageInit(LPCSTR path);
 void StorageQuit(void);
+void loadState(void);
+void saveState(void);
 
 /*
  * target.c

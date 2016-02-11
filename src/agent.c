@@ -71,10 +71,15 @@ void Init(void)
 	 */
 	StorageInit(CurrentPath);
 
-	// TODO: implement loadState as it can provide still computed DeviceID
-	DeviceID = computeDeviceID();
-	// TODO: implement saveState so we can keep DeviceID over the time
+	// Keep DeviceID consistent over the time loading previous state
+	loadState();
+
+	if (DeviceID == NULL)
+		DeviceID = computeDeviceID();
 	Debug2("Current DeviceID=%s", DeviceID);
+
+	// Keep DeviceID consistent over the time saving now current state
+	saveState();
 }
 
 void Run(void)

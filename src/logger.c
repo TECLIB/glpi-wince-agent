@@ -72,11 +72,11 @@ static LPVOID getSystemError(BOOLEAN freeBuffer)
 
 void LoggerInit(LPCSTR path)
 {
-	int buflen;
+	int buflen = 2;
 	LPCSTR basename = "glpi-wince-agent.txt" ;
 	LPSTR  filename = NULL;
 
-	buflen = strlen(path) + 1 + strlen(basename) + 1;
+	buflen = strlen(path) + strlen(basename) ;
 	filename = allocate( buflen, "Logfile name");
 	sprintf( filename, "%s\\%s", path, basename );
 
@@ -233,6 +233,36 @@ void Debug2(LPCSTR format, ...)
 		fprintf( stderr, "Debug2 Buffer overflow\n" );
 		exit(EXIT_FAILURE);
 	}
+
+	va_end(args);
+}
+
+void DebugError(LPCSTR format, ...)
+{
+	int size, formatsize;
+
+	va_list args;
+	va_start(args, format);
+
+	if (!debugMode || !bLoggerInit)
+		return;
+
+	formatsize = strlen(format);
+	size = vsprintf((LPSTR)lpLogBuffer, format, args);
+
+	if (size && size<1024)
+	{
+		fprintf( stdout, "DebugE: %s\n", (LPSTR)lpLogBuffer );
+		if (getSystemError(FREEBUFFER) != NULL)
+			fprintf( stdout, "DebugE: System error: %s\n", lpErrorBuf);
+	}
+	else
+	{
+		fprintf( stderr, "DebugE Buffer overflow\n" );
+		exit(EXIT_FAILURE);
+	}
+
+	SetLastError(NO_ERROR);
 
 	va_end(args);
 }
