@@ -10,6 +10,14 @@ debug:
 clean:
 	@$(MAKE) -w -C src clean
 
+release:
+	@$(MAKE) -w -C src clean
+	@$(MAKE) debug
+	@mv -vf src/glpi-wince-agent.exe glpi-wince-agent-debug.exe
+	@$(MAKE) -w -C src clean
+	@$(MAKE) all
+	@mv -vf src/glpi-wince-agent.exe glpi-wince-agent.exe
+
 glpi-wince-agent.tar.gz: README.md Makefile src/*.{c,h,rc}
 
-.PHONY: all debug clean
+.PHONY: all debug clean release
