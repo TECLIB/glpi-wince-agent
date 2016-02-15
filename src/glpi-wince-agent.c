@@ -116,12 +116,20 @@ LRESULT CALLBACK WndProcedure(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 void DoMenuActions(HWND w, INT id)
 {
 	switch (id) {
+#ifdef DEBUG
+		case IDM_MENU_DEBUGINVENTORY:
+			DebugInventory();
+			break;
+#endif
 		case IDM_MENU_EXIT:
 			Quit();
 			PostQuitMessage(WM_QUIT);
 			break;
 		case IDM_MENU_RUN:
 			Run();
+			break;
+		case IDM_MENU_DOINVENTORY:
+			RunInventory();
 			break;
 	}
 }

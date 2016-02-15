@@ -6,12 +6,12 @@ CC      = ${ARCH}-gcc
 WINDRES = ${ARCH}-windres
 STRIP   = ${ARCH}-strip
 CFLAGS  = -g ${STATIC} ${DEBUG} -Wall -DWIN32 -D_WIN32_WINNT=0x0501
-LIBS    = -lcommctrl -liphlpapi
+LIBS    = -lcommctrl -liphlpapi -lws2
 STATIC  = 
 DEBUG   = 
 
 OBJECTS = glpi-wince-agent.o agent.o config.o constants.o logger.o tools.o \
-	storage.o inventory.o inventory/network.o  inventory/board.o
+	storage.o inventory.o inventory/network.o inventory/board.o target.o
 
 all: glpi-wince-agent.exe
 
@@ -25,7 +25,7 @@ glpi-wince-agent.exe: ${OBJECTS} glpi-wince-agent.rsc
 	${CC} ${CFLAGS} -c -o $@ $?
 
 glpi-wince-agent.rsc: glpi-wince-agent.rc glpi-wince-agent.h
-	${WINDRES} glpi-wince-agent.rc glpi-wince-agent.rsc
+	${WINDRES} ${DEBUG} glpi-wince-agent.rc glpi-wince-agent.rsc
 
 clean:
 	@rm -vf *.o *.exe *.rsc inventory/*.o

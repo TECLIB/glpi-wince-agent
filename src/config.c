@@ -30,4 +30,9 @@
 
 CONFIG conf = {
 	DEBUG, // Default debug mode
+#ifndef DEBUG
+	NULL, // By default, no local inventory is done
+#else
+	".",  // By default, dump local inventory where agent is started in debug release
+#endif
 };

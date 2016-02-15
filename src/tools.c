@@ -26,7 +26,9 @@
 
 LPSYSTEMTIME lpLocalTime = NULL;
 
+static DWORD dwStartTick = 0;
 static LPSTR sHostname = NULL;
+
 PFIXED_INFO pFixedInfo = NULL;
 
 void *allocate(ULONG size, LPCSTR reason )
@@ -119,6 +121,11 @@ LPSYSTEMTIME getLocalTime(void)
 	lpLocalTime = allocate(sizeof(SYSTEMTIME), "LocalTime");
 	GetLocalTime(lpLocalTime);
 	return lpLocalTime;
+}
+
+void ToolsInit(void)
+{
+	dwStartTick = GetTickCount();
 }
 
 void ToolsQuit(void)

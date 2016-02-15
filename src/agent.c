@@ -29,8 +29,6 @@ LPSTR FileName = NULL;
 LPSTR CurrentPath = NULL;
 LPSTR DeviceID = NULL;
 
-DWORD dwStartTick = 0;
-
 // local functions
 static LPSTR computeDeviceID(void);
 
@@ -39,7 +37,7 @@ void Init(void)
 	int buflen = 0 ;
 	LPWSTR wFileName = NULL;
 
-	dwStartTick = GetTickCount();
+	ToolsInit();
 
 	wFileName = allocate( 2*(MAX_PATH+1), "wFileName" );
 	if (!GetModuleFileNameW(NULL, wFileName, MAX_PATH))
@@ -72,20 +70,25 @@ void Init(void)
 	StorageInit(CurrentPath);
 
 	// Keep DeviceID consistent over the time loading previous state
-	loadState();
+	DeviceID = loadState();
 
 	if (DeviceID == NULL)
 		DeviceID = computeDeviceID();
 	Debug2("Current DeviceID=%s", DeviceID);
 
 	// Keep DeviceID consistent over the time saving now current state
-	saveState();
+	saveState(DeviceID);
 }
 
 void Run(void)
 {
 	Log( "Running..." );
 	RunInventory();
+
+	TargetInit(DeviceID);
+
+	if (conf.local != NULL)
+		WriteLocal(DeviceID);
 }
 
 void Quit(void)
@@ -97,6 +100,7 @@ void Quit(void)
 	free(DeviceID);
 
 	Log( "Quitting..." );
+	TargetQuit();
 	StorageQuit();
 	ToolsQuit();
 	LoggerQuit();
@@ -130,4 +134,9 @@ static LPSTR computeDeviceID(void)
 	Debug2("Computed DeviceID=%s", DeviceID);
 
 	return DeviceID;
+}
+
+LPSTR getCurrentPath(void)
+{
+	return CurrentPath;
 }

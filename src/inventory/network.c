@@ -21,6 +21,7 @@
  */
 
 #include <windows.h>
+#include <winsock2.h>
 
 #include "../glpi-wince-agent.h"
 
@@ -56,6 +57,25 @@ static void FormatPhysicalAddress(BYTE *addr, int addrlen, LPSTR buf)
 	*ptr = '\0';
 }
 
+// Function: SupportedAdapterType
+// Description:
+//    This function takes the adapter type which is a simple integer
+//    and returns the string representation for that type.
+//    The whole list of adapter types is defined in IPIfCons.h.
+static LPCSTR SupportedAdapterType(int type)
+{
+	switch (type)
+	{
+		case MIB_IF_TYPE_ETHERNET:
+			return "ethernet";
+		case MIB_IF_TYPE_PPP|IF_TYPE_MODEM:
+			return "dialup";
+		case MIB_IF_TYPE_LOOPBACK:
+			return "loopback";
+	}
+	return NULL;
+}
+
 LPSTR getIPAddress(void)
 {
 	LPSTR ipaddress = NULL;
@@ -65,67 +85,85 @@ LPSTR getIPAddress(void)
 	return ipaddress;
 }
 
-LPSTR getMACAddress(void)
+void getNetworks(void)
 {
-#ifdef DEBUG
-	LPSTR name = NULL;
-	LPSTR macdump = NULL;
-#endif
 	LPSTR macaddress = NULL;
-	DWORD Err = 0, maclen = 0, Size = 0, Index = 0;
-	PIP_ADAPTER_ADDRESSES pAdapterAddrs, pAdapt;
-
-	// Enumerate all of the adapter specific information using the
-	// IP_ADAPTER_ADDRESSES structure.
-	// Note:  IP_ADAPTER_INFO contains a linked list of adapter entries.
+	LIST *Network = NULL;
+	LPCSTR type;
+	DWORD Err = 0, maclen = 0, Size = 0;
+	PIP_ADAPTER_INFO pAdapterInfos = NULL, pAdapterInfo = NULL;
 
 	// First get needed buffer size and allocate buffer
-	if ((Err = GetAdaptersAddresses(AF_UNSPEC, 0, NULL, NULL, &Size)) != ERROR_SUCCESS)
+	if ((Err = GetAdaptersInfo(pAdapterInfos, &Size)) != NO_ERROR)
 	{
-		if ((Err != ERROR_BUFFER_OVERFLOW) && (Err != ERROR_INSUFFICIENT_BUFFER))
+		if ( Err == ERROR_NO_DATA )
 		{
-			Error("GetAdaptersAddresses() sizing failed with error code %d\n", (int)Err);
-			return NULL;
+			Log("No network Adapter found");
+			return;
+		}
+		else if ((Err != ERROR_BUFFER_OVERFLOW) && (Err != ERROR_INSUFFICIENT_BUFFER))
+		{
+			Error("GetAdaptersInfo() sizing failed with error code %d\n", (int)Err);
+			return;
 		}
 	}
-	pAdapterAddrs = allocate(Size, "AdapterAddrs");
+	pAdapterInfos = allocate(Size, "pAdapterInfos");
 
-	// Then get all adaptaters
-	if ((Err = GetAdaptersAddresses(AF_UNSPEC, 0, NULL, pAdapterAddrs, &Size)) != ERROR_SUCCESS)
+	// Then get all adaptaters info
+	if ((Err = GetAdaptersInfo(pAdapterInfos, &Size)) != NO_ERROR)
 	{
-		Error("GetAdaptersAddresses() sizing failed with error code %d\n", (int)Err);
-		return NULL;
+		Error("GetAdaptersInfo() failed with error code %d\n", (int)Err);
+		free(pAdapterInfos);
+		return;
 	}
+
+    //NETWORKS         => [ qw/DESCRIPTION MANUFACTURER MODEL MANAGEMENT TYPE
+                             //VIRTUALDEV MACADDR WWN DRIVER FIRMWARE PCIID
+                             //PCISLOT PNPDEVICEID MTU SPEED STATUS SLAVES BASE
+                             //IPADDRESS IPSUBNET IPMASK IPDHCP IPGATEWAY
+                             //IPADDRESS6 IPSUBNET6 IPMASK6
 
 	// Enumerate through each retuned adapter and return first available one
-	pAdapt = pAdapterAddrs;
-	while (pAdapt)
+	pAdapterInfo = pAdapterInfos;
+	while (pAdapterInfo)
 	{
-		maclen = pAdapt->PhysicalAddressLength;
-#ifdef DEBUG
-		Size = wcslen(pAdapt->FriendlyName);
-		name = allocate( Size+1, NULL);
-		wcstombs(name, pAdapt->FriendlyName, Size);
-		Debug2("Adapter%d: %s (%d)", Index, name, maclen);
-		free(name);
-		if (maclen)
+		// Check type
+		type = SupportedAdapterType(pAdapterInfo->Type);
+		if (type != NULL)
 		{
-			macdump = allocate( maclen * 3, NULL);
-			FormatPhysicalAddress(pAdapt->PhysicalAddress, maclen, macdump);
-			Debug2("Adapter%d: %s", Index, macdump);
-			free(macdump);
+			// Prepare Networks list
+			Network = createList("NETWORKS");
+
+			// Add recognized type
+			addField( Network, "TYPE", (LPSTR)type );
+
+			addField( Network, "DESCRIPTION", pAdapterInfo->Description );
+
+			// Add model
+			addField( Network, "MODEL", pAdapterInfo->AdapterName );
+
+			// Add macaddress field
+			maclen = pAdapterInfo->AddressLength;
+			if (maclen && macaddress == NULL)
+			{
+				macaddress = allocate( maclen * 3, "MacAddress");
+				FormatPhysicalAddress(pAdapterInfo->Address, maclen, macaddress);
+				addField( Network, "MACADDR", macaddress );
+				free(macaddress);
+			}
+
+			// Add IP address
+			addField( Network, "IPADDRESS",
+				pAdapterInfo->CurrentIpAddress->IpAddress.String );
+			addField( Network, "IPMASK",
+				pAdapterInfo->CurrentIpAddress->IpMask.String );
+
+			// Finally add netry to Networks inventory
+			InventoryAdd( "NETWORKS", Network );
 		}
-		Index++;
-#endif
-		if (maclen && macaddress == NULL)
-		{
-			macaddress = allocate( maclen * 3, "MacAddress");
-			FormatPhysicalAddress(pAdapt->PhysicalAddress, maclen, macaddress);
-#ifndef DEBUG
-			break;
-#endif
-		}
-		pAdapt = pAdapt->Next;
+
+		pAdapterInfo = pAdapterInfo->Next;
 	}
-	return macaddress;
+
+	free(pAdapterInfos);
 }

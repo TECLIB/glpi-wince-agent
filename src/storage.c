@@ -72,12 +72,13 @@ static void _setFilePath(void)
 #define STORAGE_MAGIC_TYPE DWORD
 #define STORAGE_FILE_MAGIC (STORAGE_MAGIC_TYPE)0xdedaebfe
 
-void loadState(void)
+LPSTR loadState(void)
 {
 	FILE *hStorage;
 	STORAGE_MAGIC_TYPE magic = 0;
 	DWORD size = 0;
 	LPSTR stateContent = NULL;
+	LPSTR deviceid = NULL;
 
 	_setFilePath();
 
@@ -93,14 +94,14 @@ void loadState(void)
 		{
 			Error("Can't read magic bytes from state file");
 			fclose(hStorage);
-			return;
+			return NULL;
 		}
 		// Check magic
 		if (magic != STORAGE_FILE_MAGIC)
 		{
 			Error("Magic bytes do not match in state file");
 			fclose(hStorage);
-			return;
+			return NULL;
 		}
 
 		// Read header for debugging
@@ -108,7 +109,7 @@ void loadState(void)
 		{
 			Error("Can't read header size from state file");
 			fclose(hStorage);
-			return;
+			return NULL;
 		}
 		stateContent = allocate(size+1, "StorageFile header");
 		if (fread( stateContent, size, 1, hStorage ) != 1)
@@ -116,7 +117,7 @@ void loadState(void)
 			Error("Can't read header from state file");
 			free(stateContent);
 			fclose(hStorage);
-			return;
+			return NULL;
 		}
 		stateContent[size] = '\0';
 		Debug("StorageFile header: %s", stateContent);
@@ -127,19 +128,19 @@ void loadState(void)
 		{
 			Error("Can't read deviceid size from state file");
 			fclose(hStorage);
-			return;
+			return NULL;
 		}
-		free(DeviceID);
-		DeviceID = allocate(size+1, "StorageFile deviceid");
-		if (fread( DeviceID, size, 1, hStorage ) != 1)
+
+		deviceid = allocate(size+1, "StorageFile deviceid");
+		if (fread( deviceid, size, 1, hStorage ) != 1)
 		{
 			Error("Can't read deviceid from state file");
-			free(DeviceID);
+			free(deviceid);
 			fclose(hStorage);
-			return;
+			return NULL ;
 		}
-		DeviceID[size] = '\0';
-		Debug("StorageFile deviceid: %s", DeviceID);
+		deviceid[size] = '\0';
+		Debug("StorageFile deviceid: %s", deviceid);
 
 		if (fread( &magic, sizeof(STORAGE_MAGIC_TYPE), 1, hStorage ) != 1)
 		{
@@ -152,9 +153,11 @@ void loadState(void)
 		}
 		fclose(hStorage);
 	}
+
+	return deviceid;
 }
 
-void saveState(void)
+void saveState(LPSTR deviceid)
 {
 	FILE *hStorage;
 	STORAGE_MAGIC_TYPE magic = STORAGE_FILE_MAGIC;
@@ -197,14 +200,14 @@ void saveState(void)
 			return;
 		}
 
-		size = strlen(DeviceID);
+		size = strlen(deviceid);
 		if (fwrite( &size, sizeof(DWORD), 1, hStorage ) != 1)
 		{
 			Error("Can't write deviceid size in state file");
 			fclose(hStorage);
 			return;
 		}
-		if (fwrite( DeviceID, size, 1, hStorage ) != 1)
+		if (fwrite( deviceid, size, 1, hStorage ) != 1)
 		{
 			Error("Can't write deviceid in state file");
 			fclose(hStorage);
