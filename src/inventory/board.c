@@ -91,7 +91,7 @@ void getBios(void)
 	}
 
 	// Get DataLogic SerialNumber if available
-	hOEMDll = LoadLibrary(L"DLCEDevice.dll");
+	hOEMDll = LoadLibrary(wDATALOGIC_DLL);
 	if (hOEMDll != NULL)
 	{
 		FARPROC DLDEVICE_GetSerialNumber = NULL;
@@ -124,7 +124,39 @@ void getBios(void)
 		FreeLibrary(hOEMDll);
 	}
 	else
-		DebugError("Can't load DLCEDevice.dll");
+		DebugError("Can't load "sDATALOGIC_DLL" DLL");
+
+	// Get Motorola SerialNumber if available
+	hOEMDll = LoadLibrary(wMOTOROLA_DLL);
+	if (hOEMDll != NULL)
+	{
+		FARPROC RCM_GetESN = NULL;
+
+		Debug2("Loading Motorola GetSerialNumber API...");
+		RCM_GetESN = GetProcAddress( hOEMDll, L"RCM_GetESN" );
+		if (RCM_GetESN == NULL)
+			DebugError("Can't import Motorola GetESN() API");
+		else
+		{
+			ELECTRONIC_SERIAL_NUMBER eSN;
+			wsprintf( eSN.wszESN, L"" );
+			RCM_GetESN( &eSN );
+			buflen = wcslen(eSN.wszESN);
+			if (buflen)
+			{
+				Info = allocate( buflen+1, "Motorola SerialNumber");
+				wcstombs(Info, eSN.wszESN, buflen);
+				addField( Bios, "SSN", Info );
+				free(Info);
+			}
+			RCM_GetESN = NULL;
+		}
+
+		// Free DLL
+		FreeLibrary(hOEMDll);
+	}
+	else
+		DebugError("Can't load "sMOTOROLA_DLL" DLL");
 
 	// Insert Bios in inventory
 	InventoryAdd( "BIOS", Bios );
