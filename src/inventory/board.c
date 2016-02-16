@@ -24,6 +24,13 @@
 
 #include "../glpi-wince-agent.h"
 
+// Direct import from SDK file: getdeviceuniqueid.h
+#define GETDEVICEUNIQUEID_V1                1
+#define GETDEVICEUNIQUEID_V1_MIN_APPDATA    8
+#define GETDEVICEUNIQUEID_V1_OUTPUT         20
+
+WINBASEAPI HRESULT WINAPI GetDeviceUniqueID(LPBYTE,DWORD,DWORD,LPBYTE,DWORD);
+
 void getBios(void)
 {
 	LIST *Bios = NULL;
@@ -43,60 +50,65 @@ void getBios(void)
 void getHardware(void)
 {
 	LPSTR platform = NULL;
-	LPOSVERSIONINFO lpVersionInformation = NULL;
+	OSVERSIONINFO VersionInformation ;
 	LIST *Hardware = NULL;
-#ifdef GETDEVICEUNIQUEID
+	HINSTANCE CoreDll = NULL;
+	FARPROC GetDeviceUniqueID = NULL;
+
 	BYTE rgDeviceId[GETDEVICEUNIQUEID_V1_OUTPUT];
 	DWORD cbDeviceId = sizeof(rgDeviceId);
-#endif
 
-	lpVersionInformation = allocate( sizeof(OSVERSIONINFO), "OSVERSIONINFO" );
-	lpVersionInformation->dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
+	CoreDll = LoadLibrary(L"coredll.dll");
+	if (CoreDll != NULL)
+	{
+		Debug2("Loading GetDeviceUniqueID API...");
+		GetDeviceUniqueID = GetProcAddress( CoreDll, L"GetDeviceUniqueID" );
+		if (GetDeviceUniqueID == NULL)
+			DebugError("Can't import GetDeviceUniqueID() API");
+	}
+	else
+		DebugError("Can't load coredll.dll");
 
-	// Initialize HARDWARE list
+	// Initialize HARDWARE
 	Hardware = createList("HARDWARE");
 
 	// Add fields
 	addField( Hardware, "NAME", getHostname() );
-	if (GetVersionEx( lpVersionInformation ))
+	if (GetVersionEx( &VersionInformation ))
 	{
 		// CE OS 5.2.1235 (Build 17740.0.2.0)
-		if (lpVersionInformation->dwPlatformId != VER_PLATFORM_WIN32_CE)
-			Error("Unsupported Platform Id: %lu", lpVersionInformation->dwPlatformId);
+		if (VersionInformation.dwPlatformId != VER_PLATFORM_WIN32_CE)
+			Error("Unsupported Platform Id: %lu", VersionInformation.dwPlatformId);
 		else
 			addField( Hardware, "OSNAME", "Windows CE OS" );
 
-		platform = allocate( 64 + strlen((LPSTR)lpVersionInformation->szCSDVersion), "platformid" );
+		platform = allocate( 64 + strlen((LPSTR)VersionInformation.szCSDVersion), "platformid" );
 		sprintf( platform, "%lu.%lu.%lu",
-			lpVersionInformation->dwMajorVersion,
-			lpVersionInformation->dwMinorVersion,
-			lpVersionInformation->dwBuildNumber);
-		if (strlen((LPSTR)lpVersionInformation->szCSDVersion))
+			VersionInformation.dwMajorVersion,
+			VersionInformation.dwMinorVersion,
+			VersionInformation.dwBuildNumber);
+		if (strlen((LPSTR)VersionInformation.szCSDVersion))
 		{
 			strcat( platform, " " );
-			strcat( platform, (LPSTR)lpVersionInformation->szCSDVersion );
+			strcat( platform, (LPSTR)VersionInformation.szCSDVersion );
 		}
 		addField( Hardware, "OSVERSION", platform );
 		free(platform);
 	}
 
-#ifdef GETDEVICEUNIQUEID
-	if ( GetDeviceUniqueID( (LPBYTE)AppName, strlen(AppName),
+	if ( GetDeviceUniqueID != NULL && GetDeviceUniqueID( (LPBYTE)AppName, strlen(AppName),
 		GETDEVICEUNIQUEID_V1, rgDeviceId, &cbDeviceId ) != E_INVALIDARG )
 	{
 		int i = 0;
 		LPSTR uuid = NULL, pos = NULL;
+		Debug("Computing UUID...");
 		uuid = allocate(sizeof(BYTE)*GETDEVICEUNIQUEID_V1_OUTPUT*2 + 1, NULL);
 		for ( i=0, pos = uuid ; i<GETDEVICEUNIQUEID_V1_OUTPUT ; pos += 2, i++ )
 			sprintf( pos, "%02x", rgDeviceId[i] );
 		addField( Hardware, "UUID", uuid );
 		free(uuid);
 	}
-#endif
 
 	// Insert it in inventory
 	InventoryAdd( "HARDWARE", Hardware );
-
-	// clean up
-	free(lpVersionInformation);
 }

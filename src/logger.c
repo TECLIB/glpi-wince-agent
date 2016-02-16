@@ -254,7 +254,7 @@ void DebugError(LPCSTR format, ...)
 	{
 		fprintf( stdout, "DebugE: %s\n", (LPSTR)lpLogBuffer );
 		if (getSystemError(FREEBUFFER) != NULL)
-			fprintf( stdout, "DebugE: System error: %s\n", lpErrorBuf);
+			fprintf( stdout, "DebugE: System error: %s", lpErrorBuf);
 	}
 	else
 	{
