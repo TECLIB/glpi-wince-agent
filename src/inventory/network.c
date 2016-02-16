@@ -117,12 +117,6 @@ void getNetworks(void)
 		return;
 	}
 
-    //NETWORKS         => [ qw/DESCRIPTION MANUFACTURER MODEL MANAGEMENT TYPE
-                             //VIRTUALDEV MACADDR WWN DRIVER FIRMWARE PCIID
-                             //PCISLOT PNPDEVICEID MTU SPEED STATUS SLAVES BASE
-                             //IPADDRESS IPSUBNET IPMASK IPDHCP IPGATEWAY
-                             //IPADDRESS6 IPSUBNET6 IPMASK6
-
 	// Enumerate through each retuned adapter and return first available one
 	pAdapterInfo = pAdapterInfos;
 	while (pAdapterInfo)

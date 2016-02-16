@@ -52,17 +52,17 @@ void getHardware(void)
 	LPSTR platform = NULL;
 	OSVERSIONINFO VersionInformation ;
 	LIST *Hardware = NULL;
-	HINSTANCE CoreDll = NULL;
+	HINSTANCE hCoreDll = NULL;
 	FARPROC GetDeviceUniqueID = NULL;
 
 	BYTE rgDeviceId[GETDEVICEUNIQUEID_V1_OUTPUT];
 	DWORD cbDeviceId = sizeof(rgDeviceId);
 
-	CoreDll = LoadLibrary(L"coredll.dll");
-	if (CoreDll != NULL)
+	hCoreDll = LoadLibrary(L"coredll.dll");
+	if (hCoreDll != NULL)
 	{
 		Debug2("Loading GetDeviceUniqueID API...");
-		GetDeviceUniqueID = GetProcAddress( CoreDll, L"GetDeviceUniqueID" );
+		GetDeviceUniqueID = GetProcAddress( hCoreDll, L"GetDeviceUniqueID" );
 		if (GetDeviceUniqueID == NULL)
 			DebugError("Can't import GetDeviceUniqueID() API");
 	}
