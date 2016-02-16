@@ -24,27 +24,111 @@
 
 #include "../glpi-wince-agent.h"
 
-// Direct import from SDK file: getdeviceuniqueid.h
-#define GETDEVICEUNIQUEID_V1                1
-#define GETDEVICEUNIQUEID_V1_MIN_APPDATA    8
-#define GETDEVICEUNIQUEID_V1_OUTPUT         20
-
-WINBASEAPI HRESULT WINAPI GetDeviceUniqueID(LPBYTE,DWORD,DWORD,LPBYTE,DWORD);
+#define DEFAULT_BUFSIZE 64
 
 void getBios(void)
 {
+	UINT buflen = DEFAULT_BUFSIZE;
 	LIST *Bios = NULL;
+	LPWSTR wInfo = NULL;
+	LPSTR Info = NULL;
+	HINSTANCE hOEMDll = NULL;
 
 	// Initialize HARDWARE list
 	Bios = createList("BIOS");
 
-	// Add fields
+	// Get OEM Info
+	wInfo = allocate( buflen, "GetOemInfo" );
+	while (wInfo != NULL && !SystemParametersInfo(SPI_GETOEMINFO, buflen, wInfo, 0))
+	{
+		free(wInfo);
+		if ( GetLastError() != ERROR_INSUFFICIENT_BUFFER )
+			Error("Can't get OEM information");
+		else if (buflen>=1024*1024)
+			Error("Too big OEM information, aborting");
+		else
+			wInfo = allocate( buflen *= 2, "GetOemInfo" );
+	}
 
-	// Get serialnumber
-	addField( Bios, "SKUNUMBER", "Not implemented" );
+	if (wInfo != NULL)
+	{
+		// Convert string
+		buflen = wcslen(wInfo) + 1 ;
+		Info = allocate(buflen, "Converted GetOemInfo");
+		wcstombs(Info, wInfo, buflen);
+		free(wInfo);
 
-	// Insert it in inventory
+		// Add as system manufacturer
+		addField( Bios, "SMANUFACTURER", Info );
+		free(Info);
+	}
+
+	// Get Platform Type
+	buflen = DEFAULT_BUFSIZE;
+	wInfo = allocate( buflen, "GetPlatformType" );
+	while (!SystemParametersInfo(SPI_GETPLATFORMTYPE, buflen, wInfo, 0))
+	{
+		free(wInfo);
+		if ( GetLastError() != ERROR_INSUFFICIENT_BUFFER )
+			Error("Can't get Platform Type");
+		else if (buflen>=1024*1024)
+			Error("Too big Platform Type, aborting");
+		else
+			wInfo = allocate( buflen *= 2, "GetPlatformType" );
+	}
+
+	if (wInfo != NULL)
+	{
+		// Convert string
+		buflen = wcslen(wInfo) + 1 ;
+		Info = allocate(buflen, "Converted GetPlatformType");
+		wcstombs(Info, wInfo, buflen);
+		free(wInfo);
+
+		// Add as system model
+		addField( Bios, "SMODEL", Info );
+		free(Info);
+	}
+
+	// Get DataLogic SerialNumber if available
+	hOEMDll = LoadLibrary(L"DLCEDevice.dll");
+	if (hOEMDll != NULL)
+	{
+		FARPROC DLDEVICE_GetSerialNumber = NULL;
+
+		Debug2("Loading DataLogic GetSerialNumber API...");
+		DLDEVICE_GetSerialNumber = GetProcAddress( hOEMDll, L"DLDEVICE_GetSerialNumber" );
+		if (DLDEVICE_GetSerialNumber == NULL)
+			DebugError("Can't import DataLogic GetSerialNumber() API");
+		else
+		{
+			buflen = DLDEVICE_GetSerialNumber( wInfo, 0 );
+			if (buflen>0)
+			{
+				wInfo = allocate( 2*(buflen+1), "DataLogic SerialNumber" );
+				DLDEVICE_GetSerialNumber( wInfo, buflen );
+				buflen = wcslen(wInfo) ;
+				if (buflen)
+				{
+					Info = allocate( buflen+1, "DataLogic SerialNumber");
+					wcstombs(Info, wInfo, buflen);
+					addField( Bios, "SSN", Info );
+					free(Info);
+				}
+				free(wInfo);
+			}
+			DLDEVICE_GetSerialNumber = NULL;
+		}
+
+		// Free DLL
+		FreeLibrary(hOEMDll);
+	}
+	else
+		DebugError("Can't load DLCEDevice.dll");
+
+	// Insert Bios in inventory
 	InventoryAdd( "BIOS", Bios );
+
 }
 
 void getHardware(void)
@@ -64,7 +148,10 @@ void getHardware(void)
 		Debug2("Loading GetDeviceUniqueID API...");
 		GetDeviceUniqueID = GetProcAddress( hCoreDll, L"GetDeviceUniqueID" );
 		if (GetDeviceUniqueID == NULL)
+		{
 			DebugError("Can't import GetDeviceUniqueID() API");
+			FreeLibrary(hCoreDll);
+		}
 	}
 	else
 		DebugError("Can't load coredll.dll");
@@ -107,6 +194,8 @@ void getHardware(void)
 			sprintf( pos, "%02x", rgDeviceId[i] );
 		addField( Hardware, "UUID", uuid );
 		free(uuid);
+		GetDeviceUniqueID = NULL;
+		FreeLibrary(hCoreDll);
 	}
 
 	// Insert it in inventory

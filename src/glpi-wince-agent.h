@@ -16,6 +16,8 @@
 
 #include <iphlpapi.h>
 
+#include "sdk-extracted.h"
+
 /*
  * agent.c
  */
