@@ -2,6 +2,15 @@
 // Include
 //
 #include "glpi-wince-agent.h"
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDR_MAINICON		ICON	DISCARDABLE	"glpi-wince-agent.ico"
+
 //
 // Menu
 //
