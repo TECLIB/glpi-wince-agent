@@ -1,6 +1,7 @@
 //
 // Include
 //
+#include <windows.h>
 #include "glpi-wince-agent.h"
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -11,19 +12,75 @@
 // remains consistent on all systems.
 IDR_MAINICON		ICON	DISCARDABLE	"glpi-wince-agent.ico"
 
+/////////////////////////////////////////////////////////////////////////////
 //
-// Menu
+// Main menu
 //
 IDR_MAINMENU MENU DISCARDABLE
 BEGIN
 	POPUP "&Agent"
 	BEGIN
-		MENUITEM	"Do &Inventory",	IDM_MENU_DOINVENTORY
-#ifdef DEBUG
-		MENUITEM	"&Debug inventory",	IDM_MENU_DEBUGINVENTORY
-#endif
-		MENUITEM	"&Run",	IDM_MENU_RUN
+		MENUITEM	"&Save configuration",	IDM_MENU_SAVECONFIG
 		MENUITEM	SEPARATOR
-		MENUITEM	"E&xit",	IDM_MENU_EXIT
+		MENUITEM	"Do &Inventory",		IDM_MENU_DOINVENTORY
+#ifdef DEBUG
+		MENUITEM	"&Debug inventory",		IDM_MENU_DEBUGINVENTORY
+#endif
+		MENUITEM	"&Run",					IDM_MENU_RUN
+		MENUITEM	SEPARATOR
+		MENUITEM	"E&xit",				IDM_MENU_EXIT
+	END
+END
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Main window dialog
+//
+IDR_MAINDIALOG DIALOG 0, 10, 240, 230
+STYLE WS_VISIBLE|WS_CHILD|WS_DLGFRAME
+BEGIN
+	LTEXT		"GLPI Server URL:",IDC_STATIC,2,6,58,10
+	EDITTEXT	IDC_EDIT_URL,2,16,120,12, ES_LEFT|ES_AUTOHSCROLL|WS_BORDER|WS_TABSTOP
+	LTEXT		"Folder for local inventory:",IDC_STATIC,2,30,150,10
+	EDITTEXT	IDC_EDIT_LOCAL,2,40,120,12, ES_LEFT|ES_AUTOHSCROLL|WS_BORDER|WS_TABSTOP
+	RTEXT		"Debug Level:",IDC_STATIC,2,59,58,10
+	COMBOBOX	IDC_DEBUG_CONFIG,62,57,17,10, CBS_DROPDOWNLIST|WS_TABSTOP
+END
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+VS_VERSION_INFO VERSIONINFO
+	FILEVERSION MAJOR_VERSION,MINOR_VERSION,0,0
+	PRODUCTVERSION MAJOR_VERSION,MINOR_VERSION,0,0
+	FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
+#ifdef DEBUG
+	FILEFLAGS VS_FF_PRIVATEBUILD|VS_FF_PRERELEASE|VS_FF_DEBUG
+#else
+	FILEFLAGS VS_FF_PRIVATEBUILD|VS_FF_PRERELEASE
+#endif
+	FILEOS VOS_WINDOWSCE
+	FILETYPE VFT_APP
+	FILESUBTYPE VFT2_UNKNOWN
+BEGIN
+	BLOCK "StringFileInfo"
+	BEGIN
+		BLOCK "040904E0"
+		BEGIN
+			VALUE "CompanyName", "Teclib\0"
+			VALUE "FileDescription", "GLPI Agent for Windows CE\0"
+			VALUE "FileVersion", VERSION "\0"
+			VALUE "InternalName", "GLPI-Agent\0"
+			VALUE "LegalCopyright", "Copyright (C) 2016, Teclib\0"
+			VALUE "OriginalFilename", "glpi-wince-agent.exe\0"
+			VALUE "PrivateBuild", "Teclib arm-mingw32ce-gcc build\0"
+			VALUE "ProductName", "GLPI Agent\0"
+			VALUE "ProductVersion", VERSION "\0"
+		END
+	END
+	BLOCK "VarFileInfo"
+	BEGIN
+		VALUE "Translation", 0x409, 1200
 	END
 END

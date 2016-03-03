@@ -1,15 +1,30 @@
 
-#define VERSION			"0.3"
+#define MAJOR_VERSION	0
+#define MINOR_VERSION	4
+
+#define STRING(s)			#s
+#define XSTRING(s)			STRING(s)
+
+#define VERSION				XSTRING(MAJOR_VERSION.MINOR_VERSION)
 
 #define IDR_MAINICON			101
 #define IDR_MAINMENU			102
+#define IDR_MAINDIALOG			103
+
 #define IDM_MENU_EXIT			201
 #define IDM_MENU_RUN			202
 #define IDM_MENU_DOINVENTORY	203
+#define IDM_MENU_SAVECONFIG		204
 
 #ifdef DEBUG
-#define IDM_MENU_DEBUGINVENTORY		901
+#define IDM_MENU_DEBUGINVENTORY	901
 #endif
+
+#define IDC_EDIT_URL			1001
+#define IDC_EDIT_LOCAL			1002
+#define IDC_DEBUG_CONFIG		1003
+
+#define IDC_STATIC (-1)
 
 // Define expiration delay to 10 minutes related to GetTickCount() API
 #define EXPIRATION_DELAY  (DWORD)600000
@@ -31,11 +46,17 @@ LPSTR getDeviceID(void);
  * config.c
  */
 typedef struct {
-	int debug;		// debug level
-	LPSTR local;	// local paths
+	LPSTR server;		// GLPI server URL
+	LPSTR local;		// local path
+	int debug;			// debug level
+	BOOLEAN loaded;		// flag telling config has been loaded
 } CONFIG;
 
 CONFIG conf;
+
+CONFIG ConfigLoad(LPSTR path);
+void ConfigSave(void);
+void ConfigQuit(void);
 
 /*
  * constants.c
@@ -43,7 +64,7 @@ CONFIG conf;
 LPCSTR AppName;
 LPCSTR AgentName;
 LPCSTR InstallPath;
-LPCSTR ConfigFile;
+LPCSTR DefaultConfigFile;
 LPCSTR DefaultVarDir;
 
 /*
@@ -103,6 +124,7 @@ void DebugError(LPCSTR format, ...);
 /*
  * storage.c
  */
+LPSTR VarDir;
 void StorageInit(LPCSTR path);
 void StorageQuit(void);
 LPSTR loadState(void);
@@ -123,4 +145,5 @@ void ToolsInit(void);
 void ToolsQuit(void);
 PFIXED_INFO getNetworkParams(void);
 LPSTR getHostname(void);
+LPSTR getTimestamp(void);
 LPSYSTEMTIME getLocalTime(void);

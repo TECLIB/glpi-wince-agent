@@ -42,6 +42,8 @@ typedef ELECTRONIC_SERIAL_NUMBER FAR * LPELECTRONIC_SERIAL_NUMBER;
 // Get Electronic Serial Number
 DWORD WINAPI RCM_GetESN(LPELECTRONIC_SERIAL_NUMBER lpESN);	// Pointer to ESN structure to fill
 
+#define VOS_WINDOWSCE					0x00050000L
+
 
 /*
  * Extracted from SDK file: getdeviceuniqueid.h

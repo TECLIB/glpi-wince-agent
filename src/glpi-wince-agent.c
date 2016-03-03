@@ -22,6 +22,7 @@
 
 #include <stdio.h>
 #include <windows.h>
+#include <windowsx.h>
 #include <commctrl.h>
 
 #include "glpi-wince-agent.h"
@@ -29,7 +30,9 @@
 LRESULT CALLBACK WndProcedure(HWND, UINT, WPARAM, LPARAM);
 void DoMenuActions(HWND w, INT id);
 
-HINSTANCE	hi;
+HINSTANCE	hi = NULL;
+HWND		bar = NULL;
+HWND		dialog = NULL;
 
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
 {
@@ -49,6 +52,14 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int 
 	wClassName = allocate((strlen(AppName)+1)*2, "wClassName");
 	wsprintf( wClassName, L"%hs", AppName );
 
+	// Prevent application from starting twice
+	hWnd = FindWindow(wClassName, wAgentName);
+	if (hWnd != NULL)
+	{
+		SetForegroundWindow(hWnd);
+		return FALSE;
+	}
+
 	WndCls.style			= CS_HREDRAW | CS_VREDRAW;
 	WndCls.lpfnWndProc		= WndProcedure;
 	WndCls.cbClsExtra		= 0;
@@ -62,42 +73,141 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int 
 
 	RegisterClass(&WndCls);
 
-	hWnd = CreateWindow(wClassName, wAgentName, WS_OVERLAPPEDWINDOW, 0, 0,
+	Debug2("Windows class registered");
+
+	hWnd = CreateWindowEx(
+			0,
+			wClassName, wAgentName,
+			WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
 			CW_USEDEFAULT, CW_USEDEFAULT,
+			240, 240,
 			NULL, NULL,
 			hInstance,
 			NULL);
 
-	if (! hWnd)
-		return FALSE;
-
-	ShowWindow(hWnd, SW_SHOWNORMAL);
-	UpdateWindow(hWnd);
-
-	while (GetMessageW(&Msg, NULL, 0, 0)) {
-		TranslateMessage(&Msg);
-		DispatchMessageW(&Msg);
-	}
-
 	free(wAgentName);
 	free(wClassName);
 
-	return Msg.wParam;
+	if (! hWnd)
+	{
+		Debug2("Main window NOT created");
 
-	exit(0);
+		Quit();
+
+		Msg.wParam = FALSE;
+	}
+	else
+	{
+		Debug2("Main window created");
+
+		ShowWindow(hWnd, nCmdShow);
+		UpdateWindow(hWnd);
+
+		while (GetMessageW(&Msg, NULL, 0, 0)) {
+			TranslateMessage(&Msg);
+			DispatchMessageW(&Msg);
+		}
+	}
+
+	return Msg.wParam;
+}
+
+static BOOL DoConfigDebug(INT what, HWND dialog)
+{
+	LPARAM wIndex;
+
+	switch (what) {
+		case CBN_SELCHANGE:
+#ifdef DEBUG
+			Log("Got Debug CBN_SELCHANGE");
+#endif
+			wIndex = SendDlgItemMessage(dialog, IDC_DEBUG_CONFIG, CB_GETCURSEL, 0, 0 );
+#ifdef DEBUG
+			Log("Debug level to be set to %i", wIndex);
+#endif
+			conf.debug = wIndex;
+			return TRUE;
+	}
+	return FALSE;
+}
+
+static BOOL DoDialogActions(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
+{
+	switch (Msg) {
+		case WM_COMMAND:
+#ifdef DEBUG
+			Log("Got Dialog WM_COMMAND: %d -> %d", LOWORD(wParam), HIWORD(wParam));
+#endif
+			switch (LOWORD(wParam)) {
+				case IDC_DEBUG_CONFIG:
+					return DoConfigDebug(HIWORD(wParam), hWnd);
+					break;
+			}
+		break;
+	}
+	return FALSE;
+}
+
+static void setupMainDialog(HWND hWnd)
+{
+	HWND combo;
+	CHAR value[16];
+	LPWSTR buffer = NULL;
+	int i, len;
+
+	dialog = CreateDialog(hi,MAKEINTRESOURCE(IDR_MAINDIALOG), hWnd, DoDialogActions);
+	combo = GetDlgItem(dialog, IDC_DEBUG_CONFIG);
+
+	// Setup Debug Level Combo
+	for ( i=0 ; i <= 2 ; i++ )
+	{
+		sprintf( value, "%d", i );
+		(void)ComboBox_AddString(combo, value);
+	}
+
+	// Initialize combo with current debug level
+	SendDlgItemMessage(dialog, IDC_DEBUG_CONFIG, CB_SETCURSEL, conf.debug, 0 );
+
+	// Initialize server editbox
+	len = conf.server ? strlen(conf.server) : 0 ;
+	if (len)
+	{
+		buffer = allocate(++len*2, "server editbox");
+		wsprintf( buffer, L"%hs", conf.server );
+		SendDlgItemMessage(dialog, IDC_EDIT_URL, WM_SETTEXT, 0, (LPARAM)buffer );
+		free(buffer);
+	}
+
+	// Initialize local editbox
+	len = conf.local ? strlen(conf.local) : 0 ;
+	if (len)
+	{
+		buffer = allocate(++len*2, "local editbox");
+		wsprintf( buffer, L"%hs", conf.local );
+		SendDlgItemMessage(dialog, IDC_EDIT_LOCAL, WM_SETTEXT, 0, (LPARAM)buffer );
+		free(buffer);
+	}
 }
 
 LRESULT CALLBACK WndProcedure(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 {
-	HWND		bar;
+	HDC dc;
 
 	switch (Msg) {
 		case WM_CREATE:
+#ifdef DEBUG
+			Debug2("Setting up window...");
+#endif
 			bar = CommandBar_Create(hi, hWnd, 1);
 			CommandBar_InsertMenubar(bar, hi, IDR_MAINMENU, 0);
-			CommandBar_AddAdornments(bar, 0, 0);
+			dc = GetDC(bar);
+			SetBkColor( dc, 0x00aaaaff );
+			setupMainDialog(hWnd);
 			break;
 		case WM_SHOWWINDOW:
+			break;
+		case WM_CLOSE:
+			DestroyWindow(hWnd);
 			break;
 		case WM_DESTROY:
 			Quit();
@@ -113,14 +223,58 @@ LRESULT CALLBACK WndProcedure(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 	return 0;
 }
 
+static void keepConfig(void)
+{
+	int size = 0;
+	LPWSTR buffer = NULL;
+
+	if (dialog == NULL)
+		return;
+
+	if (SendDlgItemMessage(dialog, IDC_EDIT_URL, EM_GETMODIFY, 0, 0 ))
+	{
+		Debug("Updating server config");
+		free(conf.server);
+		size = SendDlgItemMessage(dialog, IDC_EDIT_URL, WM_GETTEXTLENGTH, 0, 0 );
+		if (size>0)
+		{
+			conf.server = allocate( ++size, "Server config");
+			buffer = allocate( size*2, "Server config buffer");
+			SendDlgItemMessage(dialog, IDC_EDIT_URL, WM_GETTEXT, (WPARAM)size, (LPARAM)buffer );
+			wcstombs(conf.server, buffer, size);
+			free(buffer);
+			Debug("Updated server config: %s", conf.server);
+		}
+		else
+		{
+			conf.server = NULL;
+		}
+	}
+
+	if (SendDlgItemMessage(dialog, IDC_EDIT_LOCAL, EM_GETMODIFY, 0, 0 ))
+	{
+		Debug("Updating local config");
+		free(conf.local);
+		size = SendDlgItemMessage(dialog, IDC_EDIT_LOCAL, WM_GETTEXTLENGTH, 0, 0 );
+		if (size>0)
+		{
+			conf.local = allocate( ++size, "Local config");
+			buffer = allocate( size*2, "Local config buffer");
+			SendDlgItemMessage(dialog, IDC_EDIT_LOCAL, WM_GETTEXT, (WPARAM)size, (LPARAM)conf.local );
+			wcstombs(conf.local, buffer, size);
+			free(buffer);
+			Debug("Updated local config: %s", conf.local);
+		}
+		else
+		{
+			conf.local = NULL;
+		}
+	}
+}
+
 void DoMenuActions(HWND w, INT id)
 {
 	switch (id) {
-#ifdef DEBUG
-		case IDM_MENU_DEBUGINVENTORY:
-			DebugInventory();
-			break;
-#endif
 		case IDM_MENU_EXIT:
 			Quit();
 			PostQuitMessage(WM_QUIT);
@@ -131,6 +285,15 @@ void DoMenuActions(HWND w, INT id)
 		case IDM_MENU_DOINVENTORY:
 			RunInventory();
 			break;
+		case IDM_MENU_SAVECONFIG:
+			keepConfig();
+			ConfigSave();
+			break;
+#ifdef DEBUG
+		case IDM_MENU_DEBUGINVENTORY:
+			DebugInventory();
+			break;
+#endif
 	}
 }
 

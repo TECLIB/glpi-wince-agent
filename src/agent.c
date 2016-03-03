@@ -69,6 +69,9 @@ void Init(void)
 	 */
 	StorageInit(CurrentPath);
 
+	// Load config as StorageInit() has now initialized VarDir
+	conf = ConfigLoad(VarDir);
+
 	// Keep DeviceID consistent over the time loading previous state
 	DeviceID = loadState();
 
@@ -101,6 +104,7 @@ void Quit(void)
 
 	Log( "Quitting..." );
 	TargetQuit();
+	ConfigQuit();
 	StorageQuit();
 	ToolsQuit();
 	LoggerQuit();

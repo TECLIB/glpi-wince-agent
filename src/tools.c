@@ -24,10 +24,13 @@
 
 #include "glpi-wince-agent.h"
 
+#define MAX_TS_SIZE 16
+
 LPSYSTEMTIME lpLocalTime = NULL;
 
 static DWORD dwStartTick = 0;
 static LPSTR sHostname = NULL;
+static LPSTR timestamp = NULL ;
 
 PFIXED_INFO pFixedInfo = NULL;
 
@@ -115,6 +118,19 @@ LPSTR getHostname(void)
 	return sHostname;
 }
 
+// Timestamp to be used while debugging
+LPSTR getTimestamp(void)
+{
+#ifdef DEBUG
+	if (conf.debug)
+	{
+		DWORD ticks = GetTickCount() - dwStartTick;
+		snprintf(timestamp, MAX_TS_SIZE-1, "%li.%03li: ", ticks/1000, ticks%1000);
+	}
+#endif
+	return timestamp;
+}
+
 LPSYSTEMTIME getLocalTime(void)
 {
 	free(lpLocalTime);
@@ -126,6 +142,12 @@ LPSYSTEMTIME getLocalTime(void)
 void ToolsInit(void)
 {
 	dwStartTick = GetTickCount();
+#ifdef DEBUG
+	timestamp = allocate( MAX_TS_SIZE, NULL);
+	*timestamp = '\0';
+#else
+	timestamp = "";
+#endif
 }
 
 void ToolsQuit(void)
@@ -133,4 +155,7 @@ void ToolsQuit(void)
 	free(lpLocalTime);
 	free(pFixedInfo);
 	free(sHostname);
+#ifdef DEBUG
+	free(timestamp);
+#endif
 }

@@ -135,13 +135,13 @@ void Log(LPCSTR format, ...)
 	size = vsprintf((LPSTR)lpLogBuffer, format, args);
 
 	if (size && size<1024)
-		fprintf( stdout, "Info  : %s\n", lpLogBuffer );
+		fprintf( stdout, "%sInfo  : %s\n", getTimestamp(), lpLogBuffer );
 	else
 	{
 		if (getSystemError(FREEBUFFER) != NULL)
-			fprintf( stdout, "Error with '%s' format, %s\n", format, lpErrorBuf);
+			fprintf( stdout, "%sError with '%s' format, %s\n", getTimestamp(), format, lpErrorBuf);
 		else
-			fprintf( stdout, "Error with '%s' format\n", format);
+			fprintf( stdout, "%sError with '%s' format\n", getTimestamp(), format);
 		fprintf( stderr, "Log Buffer overflow\n" );
 		exit(EXIT_FAILURE);
 	}
@@ -166,7 +166,7 @@ void Error(LPCSTR format, ...)
 
 	if (size && size<1024)
 	{
-		fprintf( stdout, "Error : %s\n", lpLogBuffer );
+		fprintf( stdout, "%sError : %s\n", getTimestamp(), lpLogBuffer );
 		fprintf( stderr, "Error : %s\n", lpLogBuffer );
 		if (getSystemError(FREEBUFFER) != NULL)
 			fprintf( stdout, "Last system error: %s\n", lpErrorBuf);
@@ -177,9 +177,9 @@ void Error(LPCSTR format, ...)
 	else
 	{
 		if (getSystemError(FREEBUFFER) != NULL)
-			fprintf( stdout, "Error with '%s' format, %s\n", format, lpErrorBuf);
+			fprintf( stdout, "%sError with '%s' format, %s\n", getTimestamp(), format, lpErrorBuf);
 		else
-			fprintf( stdout, "Error with '%s' format\n", format);
+			fprintf( stdout, "%sError with '%s' format\n", getTimestamp(), format);
 		fprintf( stderr, "Error Buffer overflow\n" );
 		exit(EXIT_FAILURE);
 	}
@@ -203,7 +203,7 @@ void Debug(LPCSTR format, ...)
 	size = vsprintf((LPSTR)lpLogBuffer, format, args);
 
 	if (size && size<1024)
-		fprintf( stdout, "Debug : %s\n", (LPSTR)lpLogBuffer );
+		fprintf( stdout, "%sDebug : %s\n", getTimestamp(), (LPSTR)lpLogBuffer );
 	else
 	{
 		fprintf( stderr, "Debug Buffer overflow\n" );
@@ -227,7 +227,7 @@ void Debug2(LPCSTR format, ...)
 	size = vsprintf((LPSTR)lpLogBuffer, format, args);
 
 	if (size && size<1024)
-		fprintf( stdout, "Debug2: %s\n", (LPSTR)lpLogBuffer );
+		fprintf( stdout, "%sDebug2: %s\n", getTimestamp(), (LPSTR)lpLogBuffer );
 	else
 	{
 		fprintf( stderr, "Debug2 Buffer overflow\n" );
@@ -252,9 +252,9 @@ void DebugError(LPCSTR format, ...)
 
 	if (size && size<1024)
 	{
-		fprintf( stdout, "DebugE: %s\n", (LPSTR)lpLogBuffer );
+		fprintf( stdout, "%sDebugE: %s\n", getTimestamp(), (LPSTR)lpLogBuffer );
 		if (getSystemError(FREEBUFFER) != NULL)
-			fprintf( stdout, "DebugE: System error: %s", lpErrorBuf);
+			fprintf( stdout, "%sDebugE: System error: %s\n", getTimestamp(), lpErrorBuf);
 	}
 	else
 	{
