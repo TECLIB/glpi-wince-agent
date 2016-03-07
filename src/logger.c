@@ -266,3 +266,28 @@ void DebugError(LPCSTR format, ...)
 
 	va_end(args);
 }
+
+void RawDebug(LPCSTR format, LPBYTE buffer, ULONG size)
+{
+	LPCSTR HexLookup = "0123456789abcdef";
+	LPSTR dumpbuffer = NULL, index = NULL;
+	LPBYTE max = buffer + size ;
+	BYTE value;
+
+	if (!conf.debug || !bLoggerInit)
+		return;
+
+	index = dumpbuffer = allocate( 2*size+1, NULL );
+
+	while (buffer<max)
+	{
+		value = *buffer++;
+		*index++ = HexLookup[(value >> 4) & 0x0F];
+		*index++ = HexLookup[value & 0x0F];
+	}
+	*index ='\0';
+
+	Debug(format, dumpbuffer);
+
+	free(dumpbuffer);
+}

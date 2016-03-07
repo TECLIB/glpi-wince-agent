@@ -1,6 +1,6 @@
 
 #define MAJOR_VERSION	0
-#define MINOR_VERSION	4
+#define MINOR_VERSION	5
 
 #define STRING(s)			#s
 #define XSTRING(s)			STRING(s)
@@ -120,6 +120,7 @@ void Error(LPCSTR format, ...);
 void Debug(LPCSTR format, ...);
 void Debug2(LPCSTR format, ...);
 void DebugError(LPCSTR format, ...);
+void RawDebug(LPCSTR format, LPBYTE buffer, ULONG size);
 
 /*
  * storage.c
