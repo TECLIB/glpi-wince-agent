@@ -41,10 +41,10 @@ static void FormatPhysicalAddress(BYTE *addr, int addrlen, LPSTR buf)
 	for(i=0; i < addrlen ;i++)
 	{
 		// Take each byte and convert to a hex digit
-		_itoa( addr[i] >> 4, ptr, sizeof(ptr));
+		_itoa( addr[i] >> 4, ptr, 16);
 		ptr++;
 
-		_itoa( addr[i] & 0x0F, ptr, sizeof(ptr));
+		_itoa( addr[i] & 0x0F, ptr, 16);
 		ptr++;
 
 		// Add the dash if we're not at the end
