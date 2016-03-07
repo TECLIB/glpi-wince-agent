@@ -24,6 +24,7 @@
 #include <windows.h>
 #include <windowsx.h>
 #include <commctrl.h>
+#include <shellapi.h>
 
 #include "glpi-wince-agent.h"
 
@@ -148,12 +149,20 @@ static BOOL DoDialogActions(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 	return FALSE;
 }
 
-static void setupMainDialog(HWND hWnd)
+static void setupMainPanel(HWND hWnd)
 {
 	HWND combo;
 	CHAR value[16];
 	LPWSTR buffer = NULL;
 	int i, len;
+
+#ifdef DEBUG
+			Debug2("Setting up panel...");
+#endif
+
+	bar = CommandBar_Create(hi, hWnd, 1);
+	CommandBar_AddAdornments(bar, CMDBAR_OK, 0);
+	CommandBar_InsertMenubarEx(bar, hi, MAKEINTRESOURCE(IDR_MAINMENU), 0);
 
 	dialog = CreateDialog(hi,MAKEINTRESOURCE(IDR_MAINDIALOG), hWnd, DoDialogActions);
 	combo = GetDlgItem(dialog, IDC_DEBUG_CONFIG);
@@ -191,18 +200,9 @@ static void setupMainDialog(HWND hWnd)
 
 LRESULT CALLBACK WndProcedure(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 {
-	HDC dc;
-
 	switch (Msg) {
 		case WM_CREATE:
-#ifdef DEBUG
-			Debug2("Setting up window...");
-#endif
-			bar = CommandBar_Create(hi, hWnd, 1);
-			CommandBar_InsertMenubar(bar, hi, IDR_MAINMENU, 0);
-			dc = GetDC(bar);
-			SetBkColor( dc, 0x00aaaaff );
-			setupMainDialog(hWnd);
+			setupMainPanel(hWnd);
 			break;
 		case WM_SHOWWINDOW:
 			break;
@@ -275,6 +275,11 @@ static void keepConfig(void)
 void DoMenuActions(HWND w, INT id)
 {
 	switch (id) {
+		case IDOK:
+			Run();
+			Quit();
+			PostQuitMessage(WM_QUIT);
+			break;
 		case IDM_MENU_EXIT:
 			Quit();
 			PostQuitMessage(WM_QUIT);
