@@ -21,18 +21,38 @@
  */
 
 #include <windows.h>
+#include <winioctl.h>
 
 #include "../glpi-wince-agent.h"
 
 #define DEFAULT_BUFSIZE 64
+
+enum supported_manufacturer {
+	Man_nosupport = 0,
+	Man_HTC,
+	Man_DataLogic,
+	Man_Motorola,
+	Man_Microsoft,
+	Man_END
+};
+
+MANUFACTURER Manufacturers[] = {
+	{	Man_nosupport,	"Not supported" },
+	{	Man_HTC,		"HTC" 			},
+	{	Man_DataLogic,	"Datalogic"		},
+	{	Man_Motorola,	"Motorola"		},
+	{	Man_Microsoft,	"Microsoft"		},
+	{	Man_END,		NULL			},
+};
 
 void getBios(void)
 {
 	UINT buflen = DEFAULT_BUFSIZE;
 	LIST *Bios = NULL;
 	LPWSTR wInfo = NULL;
-	LPSTR Info = NULL;
+	LPSTR Info = NULL, sOEMInfo = NULL;
 	HINSTANCE hOEMDll = NULL;
+	LPMANUFACTURER manufacturer = &Manufacturers[Man_nosupport];
 
 	// Initialize HARDWARE list
 	Bios = createList("BIOS");
@@ -54,13 +74,27 @@ void getBios(void)
 	{
 		// Convert string
 		buflen = wcslen(wInfo) + 1 ;
-		Info = allocate(buflen, "Converted GetOemInfo");
-		wcstombs(Info, wInfo, buflen);
+		sOEMInfo = allocate(buflen, "Converted GetOemInfo");
+		wcstombs(sOEMInfo, wInfo, buflen);
 		free(wInfo);
 
+		// Search if this manufacturer is known
+		while (++manufacturer<&Manufacturers[Man_END])
+		{
+#ifdef DEBUG
+			Debug2("Looking for %s in %s...", manufacturer->name, sOEMInfo);
+#endif
+			if (strstr(sOEMInfo, manufacturer->name) != NULL)
+				break;
+		}
+		if (manufacturer->id == Man_END)
+		{
+			Log("No supported manufacturer found in OEMInfo: %s", sOEMInfo);
+			manufacturer = &Manufacturers[Man_nosupport];
+		}
+
 		// Add as system manufacturer
-		addField( Bios, "SMANUFACTURER", Info );
-		free(Info);
+		addField( Bios, "SMANUFACTURER", (LPSTR)manufacturer->name );
 	}
 
 	// Get Platform Type
@@ -85,10 +119,25 @@ void getBios(void)
 		wcstombs(Info, wInfo, buflen);
 		free(wInfo);
 
-		// Add as system model
-		addField( Bios, "SMODEL", Info );
+		// Reformat when platform type not appears in OEMInfo
+		if (strstr(sOEMInfo, Info) == NULL && strstr(sOEMInfo, manufacturer->name) == sOEMInfo)
+		{
+			LPSTR oeminfo = &sOEMInfo[strlen(manufacturer->name)+1];
+			// Add oeminfo + platformtype as system model
+			addField( Bios, "SMODEL", vsPrintf("%s %s", oeminfo, Info));
+		}
+		else
+		{
+			// Add as system model
+			addField( Bios, "SMODEL", Info );
+		}
 		free(Info);
 	}
+
+	free(sOEMInfo);
+
+	// Check possibly interesting structure
+	CheckDeviceId(manufacturer, Bios);
 
 	// Get DataLogic SerialNumber if available
 	hOEMDll = LoadLibrary(wDATALOGIC_DLL);
@@ -232,4 +281,96 @@ void getHardware(void)
 
 	// Insert it in inventory
 	InventoryAdd( "HARDWARE", Hardware );
+}
+
+void CheckDeviceId(LPMANUFACTURER manufacturer, LIST *list)
+{
+	PULONG pTerminalID, pPlatformID;
+	BOOL bGet ;
+	LPSTR szPlatformID = NULL;
+	DWORD dwOutSizeOf = 0, size = 0;
+
+	DEVICE_ID DeviceID, *pDeviceID ;
+	DeviceID.dwSize = 0;
+
+	if (!KernelIoControl(IOCTL_HAL_GET_DEVICEID, NULL, 0, &DeviceID, 0, NULL))
+	{
+		if (!DeviceID.dwSize)
+		{
+			DebugError("Failed to retreive DeviceID");
+			return;
+		}
+	}
+	else
+	{
+		DebugError("Unexpected response while requesting DeviceID structure size");
+		return;
+	}
+
+	pDeviceID = allocate( DeviceID.dwSize, "Device ID" );
+	pDeviceID->dwSize = DeviceID.dwSize;
+
+	bGet = KernelIoControl(IOCTL_HAL_GET_DEVICEID, NULL, 0, pDeviceID, pDeviceID->dwSize, &dwOutSizeOf);
+
+	if ( bGet && dwOutSizeOf > 0 )
+	{
+#ifdef DEBUG
+		RawDebug("DeviceID struct: %s", (LPBYTE)pDeviceID, DeviceID.dwSize);
+#endif
+
+		if ( pDeviceID->dwPresetIDBytes > 0 )
+		{
+			Debug2("Size of Terminal ID: %d", pDeviceID->dwPresetIDBytes);
+			pTerminalID = (PULONG)((BYTE *)pDeviceID + pDeviceID->dwPresetIDOffset);
+			Debug2("Found TerminalID: %lu", *pTerminalID);
+#ifdef DEBUG
+			RawDebug("Raw TerminalID: %s", (LPBYTE)pTerminalID, pDeviceID->dwPresetIDBytes);
+#endif
+		}
+		else
+		{
+			Log("No TerminalID available");
+		}
+
+		if ( pDeviceID->dwPlatformIDBytes > 0 )
+		{
+			Debug2("Size of PlatformID: %d", pDeviceID->dwPlatformIDBytes);
+			size = pDeviceID->dwPlatformIDBytes / sizeof(WCHAR);
+			szPlatformID = allocate(size+1, "PlatformID");
+
+			if ( szPlatformID != NULL )
+			{
+				pPlatformID = (PULONG)((LPBYTE)pDeviceID + pDeviceID->dwPlatformIDOffset);
+				wcstombs(szPlatformID, (LPWSTR)pPlatformID, size);
+				Debug("Found PlatformID: %s", szPlatformID);
+				free(szPlatformID);
+#ifdef DEBUG
+				RawDebug("Raw PlatformID: %s", (LPBYTE)pPlatformID, pDeviceID->dwPlatformIDBytes);
+#endif
+			}
+		}
+		else
+		{
+			Log("No PlatformID available");
+		}
+
+		// HTC Touch Diamond IMEI
+		if (manufacturer->id == Man_HTC)
+		{
+			LPSTR sIMEI = allocate(16, NULL);
+			*sIMEI = '\0';
+			strcat(sIMEI, hexstring(((LPBYTE)pDeviceID)+28, 2));
+			strcat(sIMEI, hexstring(((LPBYTE)pDeviceID)+32, 6));
+			// Last char could be skipped
+			sIMEI[strlen(sIMEI)-1] = '\0';
+			Debug2("Found HTC IMEI: %s", sIMEI);
+			addField( list, "IMEI", sIMEI );
+		}
+	}
+	else
+	{
+		DebugError("Error with KernelIOControl: %d bytes returned", dwOutSizeOf);
+	}
+
+	free(pDeviceID);
 }

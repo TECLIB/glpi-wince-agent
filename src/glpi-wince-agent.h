@@ -102,8 +102,14 @@ void DebugEntry(ENTRY *entry, LPCSTR parent);
 /*
  * inventory/board.c
  */
+typedef struct _MANUFACTURER {
+	DWORD id;
+	LPCSTR name;
+} MANUFACTURER, *LPMANUFACTURER;
+
 void getBios(void);
 void getHardware(void);
+void CheckDeviceId(LPMANUFACTURER manufacturer, LIST *list);
 
 /*
  * inventory/network.c
@@ -148,3 +154,5 @@ PFIXED_INFO getNetworkParams(void);
 LPSTR getHostname(void);
 LPSTR getTimestamp(void);
 LPSYSTEMTIME getLocalTime(void);
+LPSTR vsPrintf( LPCSTR fmt, ... );
+LPSTR hexstring(BYTE *addr, int addrlen);

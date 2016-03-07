@@ -25,6 +25,7 @@
 #include "glpi-wince-agent.h"
 
 #define MAX_TS_SIZE 16
+#define MAX_VS_SIZE 256
 
 LPSYSTEMTIME lpLocalTime = NULL;
 
@@ -158,4 +159,40 @@ void ToolsQuit(void)
 #ifdef DEBUG
 	free(timestamp);
 #endif
+}
+
+LPSTR vsPrintf( LPCSTR fmt, ... ) {
+	va_list argptr;
+	static char text[MAX_VS_SIZE];
+	text[MAX_VS_SIZE-1] = '\0';
+
+	va_start (argptr, fmt);
+	_vsnprintf (text, MAX_VS_SIZE-1, fmt, argptr);
+	va_end (argptr);
+
+	return text;
+}
+
+LPSTR hexstring(BYTE *addr, int addrlen)
+{
+	int i;
+	static char buf[MAX_VS_SIZE];
+	LPSTR ptr = buf;
+
+	if (addrlen > 0 && addrlen<MAX_VS_SIZE/2)
+	{
+		for(i=0; i < addrlen ;i++)
+		{
+			// Take each byte and convert to a hex digit
+			_itoa( addr[i] >> 4, ptr, 16);
+			ptr++;
+
+			_itoa( addr[i] & 0x0F, ptr, 16);
+			ptr++;
+		}
+	}
+
+	*ptr = '\0';
+
+	return buf;
 }
