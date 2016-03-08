@@ -1,6 +1,6 @@
 
 #define MAJOR_VERSION	0
-#define MINOR_VERSION	5
+#define MINOR_VERSION	6
 
 #define STRING(s)			#s
 #define XSTRING(s)			STRING(s)
@@ -143,6 +143,7 @@ void saveState(LPSTR deviceid);
 void TargetInit(LPSTR deviceid);
 void TargetQuit(void);
 void WriteLocal(LPSTR deviceid);
+void SendRemote(LPSTR deviceid);
 
 /*
  * tools.c

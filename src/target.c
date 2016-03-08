@@ -147,3 +147,53 @@ void WriteLocal(LPSTR deviceid)
 	else
 		Log("No local inventory file written");
 }
+
+static BOOLEAN SendToServer(LPSTR deviceid, LPCSTR url)
+{
+	return FALSE;
+}
+
+void SendRemote(LPSTR deviceid)
+{
+	int Length = 0, count = 0;
+	LPSTR separator, urlbuffer, cursor = conf.server;
+
+	Debug("Parsing inventory server: %s", cursor);
+
+	while (cursor != NULL)
+	{
+		// Prepare server url
+		Length = strlen(cursor);
+		separator = strstr(cursor, ",");
+		if (separator != NULL)
+		{
+			Length = separator - cursor;
+		}
+
+		urlbuffer = allocate( Length+2, NULL );
+		snprintf( urlbuffer, Length+1, "%s", cursor );
+
+		if (Length != 0)
+		{
+			Log("About to send inventory to '%s'...", urlbuffer);
+			if (SendToServer(deviceid, urlbuffer))
+				count ++;
+			else
+				Error("Failed to send inventory to '%s'", urlbuffer);
+		}
+
+		free(urlbuffer);
+
+		if (separator == NULL)
+			break;
+
+		cursor = ++separator ;
+	}
+
+	if (count>1)
+		Log("%d remote inventory sent", count);
+	else if (count)
+		Log("One inventory sent");
+	else
+		Log("No inventory sent to server");
+}

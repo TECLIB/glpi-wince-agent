@@ -90,8 +90,16 @@ void Run(void)
 
 	TargetInit(DeviceID);
 
+	Log( "Submitting..." );
+	// Write local inventory if desired
 	if (conf.local != NULL)
 		WriteLocal(DeviceID);
+
+	// Send inventory if desired
+	if (conf.server != NULL)
+		SendRemote(DeviceID);
+
+	Log( "Run finished" );
 }
 
 void Quit(void)
