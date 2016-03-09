@@ -126,7 +126,7 @@ LPSTR getTimestamp(void)
 	if (conf.debug)
 	{
 		DWORD ticks = GetTickCount() - dwStartTick;
-		snprintf(timestamp, MAX_TS_SIZE-1, "%li.%03li: ", ticks/1000, ticks%1000);
+		_snprintf(timestamp, MAX_TS_SIZE-1, "%li.%03li: ", ticks/1000, ticks%1000);
 	}
 #endif
 	return timestamp;

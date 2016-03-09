@@ -26,7 +26,6 @@
 #include "glpi-wince-agent.h"
 
 LIST *Xml = NULL;
-HINTERNET hOpen = NULL;
 
 typedef struct {
 	LPSTR url;
@@ -51,10 +50,6 @@ void TargetInit(LPSTR deviceid)
 
 void TargetQuit(void)
 {
-	// Close connection handle
-	if ( hOpen != NULL && !InternetCloseHandle(hOpen) )
-		DebugError("Got failure while closing connection handle");
-
 	free(Xml);
 }
 
@@ -195,31 +190,26 @@ void WriteLocal(LPSTR deviceid)
 
 	Log("About to write inventory in local file...");
 
-	while (cursor != NULL)
+	while (cursor != NULL && *cursor != '\0')
 	{
 		// Prepare filename
-		Length = strlen(cursor);
 		separator = strstr(cursor, ",");
-		if (separator != NULL)
-		{
-			Length = separator - cursor;
-		}
-
-		// Handle "." special case
-		if (strncmp(cursor, ".", Length) == 0)
-		{
-			Debug("Writing local inventory in current path");
-			cursor = getCurrentPath();
-			Length = strlen(cursor);
-		}
-
-		buffer = allocate( Length+2, NULL );
-		snprintf( buffer, Length+1, "%s", cursor );
+		Length = separator != NULL ? separator - cursor : strlen(cursor);
 
 		if (Length != 0)
 		{
-			LocalFile = allocate( Length + strlen(deviceid) + 6, "LocalFile");
-			sprintf( LocalFile, "%s\\%s.ocs", buffer, deviceid);
+			// Handle "." special case
+			if (strncmp(cursor, ".", Length) == 0)
+			{
+				Debug("Writing local inventory in current path");
+				cursor = getCurrentPath();
+				Length = strlen(cursor);
+			}
+
+			buffer = allocate( Length+1, NULL );
+			_snprintf( buffer, Length, "%s", cursor );
+			LocalFile = vsPrintf("%s\\%s.ocs", buffer, deviceid);
+			free(buffer);
 			Debug("Writing local inventory to %s", LocalFile);
 
 			hLocal = fopen( LocalFile, "w" );
@@ -233,15 +223,12 @@ void WriteLocal(LPSTR deviceid)
 				fclose(hLocal);
 				count ++;
 			}
-			free(LocalFile);
 		}
 
-		free(buffer);
+		cursor = separator ;
+		if (cursor != NULL)
+			cursor ++;
 
-		if (separator == NULL)
-			break;
-
-		cursor = ++separator ;
 	}
 
 	if (count>1)
@@ -340,17 +327,79 @@ static void FreeGlpiUrl(LPGLPISERVER glpi)
 	free(glpi);
 }
 
+static void InternetError(LPCSTR error)
+{
+	DWORD dwError = 0, dwBufferLength = 0;
+	LPSTR lpszBuffer = NULL;
+
+	if (!InternetGetLastResponseInfoA(&dwError, lpszBuffer, &dwBufferLength))
+	{
+		if ( GetLastError() != ERROR_INSUFFICIENT_BUFFER )
+		{
+			Error("%s, and can't get InternetError Info", error);
+		}
+		else
+		{
+			lpszBuffer = allocate( dwBufferLength+1, "InternetError" );
+			if (!InternetGetLastResponseInfoA(&dwError, lpszBuffer, &dwBufferLength))
+			{
+				Error("%s, and can't get InternetError Info in allocated buffer", error);
+			}
+			else
+			{
+				Error("%s, error=%d: %s", error, dwError, lpszBuffer);
+			}
+			free(lpszBuffer);
+		}
+	}
+}
+
 static BOOLEAN SendToServer(LPSTR deviceid, LPGLPISERVER glpi)
 {
-	HINTERNET hInet, hRequest;
+	HINTERNET hOpen, hInet, hRequest;
 	BOOLEAN useSsl = FALSE, result = TRUE;
-	DWORD dwFlags = INTERNET_FLAG_RELOAD | INTERNET_FLAG_NO_CACHE_WRITE ;
+	DWORD dwState = 0, dwFlags = 0 ;
 	LPSTR content = NULL;
+
+	// Default flag for submission
+	dwFlags |= INTERNET_FLAG_NO_CACHE_WRITE ;
+	dwFlags |= INTERNET_FLAG_PRAGMA_NOCACHE ;
 
 	if (glpi == NULL)
 	{
 		Error("GLPI Server url not initialized");
 		return FALSE;
+	}
+
+	// Check internet connection availability
+	if (InternetGetConnectedState(&dwState, 0))
+	{
+		if ( dwState & INTERNET_CONNECTION_OFFLINE )
+		{
+			Error("Internet connection is OFF-LINE");
+			return FALSE;
+		}
+		if ( dwState & INTERNET_CONNECTION_CONFIGURED )
+			Log("Internet connection seems configured");
+		if ( dwState & INTERNET_CONNECTION_LAN )
+			Log("Lan connection available");
+		if ( dwState & INTERNET_CONNECTION_PROXY )
+			Log("Internet connection available via proxy");
+		if ( dwState & INTERNET_RAS_INSTALLED )
+			Log("RAS internet installed");
+		if ( dwState & INTERNET_CONNECTION_MODEM )
+			Log("Internet connection available via modem");
+	}
+	else
+	{
+		Error("No internet connection available on device");
+		return FALSE;
+	}
+
+	// Check internet connection connectivity
+	if (conf.debug && !InternetCheckConnectionA(NULL,0,0))
+	{
+		Debug("Internet connection connectivity test failed");
 	}
 
 	content = getContent();
@@ -377,34 +426,43 @@ static BOOLEAN SendToServer(LPSTR deviceid, LPGLPISERVER glpi)
 			dwFlags |= INTERNET_FLAG_IGNORE_CERT_DATE_INVALID;
 			dwFlags |= INTERNET_FLAG_SECURE;
 		case INTERNET_SCHEME_HTTP:
+			Debug2("Standard HTTP scheme will be used for the request");
 			break;
 		default:
+			free(content);
 			Error("Not supported scheme for this server");
 			return FALSE;
 	}
 
 	// Prepare Internet access if still not prepared
+	Debug2("Opening internet access");
+	LPSTR UserAgent = vsPrintf("%s (wince)", AgentName);
+	hOpen = InternetOpenA( UserAgent, INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
 	if (hOpen == NULL)
 	{
-		hOpen = InternetOpenA( vsPrintf("%s (wince)", AgentName),
-			INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, INTERNET_FLAG_ASYNC);
-		if (hOpen == NULL)
-		{
-			Error("Can't get internet access");
-			return FALSE;
-		}
+		free(content);
+		Error("Can't get internet access");
+		return FALSE;
+	}
+	else
+	{
+		Debug("Internet opened");
+		Debug2("User-Agent set to '%s'", UserAgent);
 	}
 
 	// Get internet session
+	Debug2("Opening internet session");
 	hInet = InternetConnectA( hOpen, (LPCSTR)glpi->server, glpi->port,
 		(LPCSTR)glpi->username, (LPCSTR)glpi->password, INTERNET_SERVICE_HTTP, 0, 0);
 	if (hInet == NULL)
 	{
+		free(content);
 		Error("Can't get internet session to access %s", glpi->server);
 		return FALSE;
 	}
 
 	// Prepare POST request
+	Debug2("Preparing HTTP request");
 	hRequest = HttpOpenRequestA( hInet, "POST",
 		(LPCSTR)glpi->urlpath, NULL, NULL, NULL, dwFlags, 0);
 	if (hRequest == NULL)
@@ -414,66 +472,94 @@ static BOOLEAN SendToServer(LPSTR deviceid, LPGLPISERVER glpi)
 	}
 	else
 	{
-		DWORD length, size;
+		DWORD length, size = 0;
+		LPSTR header = NULL;
 
-		length = strlen(content);
+		if (content != NULL)
+			length = strlen(content);
+
+		// Add content-type header
+		header = vsPrintf("Content-type: %s\n", "application/xml");
+		size = strlen(header);
+		if ( !HttpAddRequestHeadersA(hRequest, header, size,
+				HTTP_ADDREQ_FLAG_ADD | HTTP_ADDREQ_FLAG_REPLACE ))
+		{
+			Error("Failed to set request Content-type");
+		}
 
 		// Do the request
+		Debug2("Sending the HTTP request");
 		if (!HttpSendRequestA(hRequest, NULL, 0, content, length))
 		{
-			Error("Failed to post request to server");
+			InternetError("Failed to post request to server");
 			result = FALSE;
 		}
 		else
 		{
 			// Check result
+			Debug2("Checking HTTP response status code");
 			dwFlags = HTTP_QUERY_STATUS_CODE|HTTP_QUERY_FLAG_NUMBER ;
-			size = length;
-			if (!HttpQueryInfoA(hRequest, dwFlags, content, &size, NULL))
+			size = sizeof(dwState);
+			if (!HttpQueryInfoA(hRequest, dwFlags, &dwState, &size, NULL))
 			{
 				Error("Failed to check HTTP status code");
 				result = FALSE;
 			}
 			else
 			{
-				LPDWORD lpStatus = (LPDWORD) content;
-				switch (*lpStatus)
+				switch (dwState)
 				{
 					case 200:
 						Log("Inventory submitted");
 						break;
+					case 403:
+						Error("Authentication required");
+						result = FALSE;
+						break;
+					case 404:
+						Error("GLPI not found behind URL");
+						result = FALSE;
+						break;
+					case 405:
+						Error("Request not allowed");
+						result = FALSE;
+						break;
 					default:
-						Error("Server status code: %d", *lpStatus);
+						Error("Server status code: %d", dwState);
 						result = FALSE;
 						dwFlags = HTTP_QUERY_STATUS_TEXT ;
-						size = length;
-						if (!HttpQueryInfoA(hRequest, dwFlags, content, &size, NULL))
+						size = 0;
+						if (!HttpQueryInfoA(hRequest, dwFlags, NULL, &size, NULL))
 						{
-							Error("Failed to check HTTP status text");
-						}
-						else
-						{
-							Error("Server status text: %s", content);
+							free(content);
+							content = allocate(size, NULL);
+							if (!HttpQueryInfoA(hRequest, dwFlags, content, &size, NULL))
+							{
+								Error("Failed to check HTTP status text");
+							}
+							else
+							{
+								Error("Server status text: %s", content);
+							}
 						}
 						break;
 				}
 			}
 
 			// Debug content returned
-			if (!InternetReadFile(hRequest, content, length, &size))
+			if (conf.debug>1)
 			{
-				Error("Failed to check returned content");
-			}
-			else
-			{
-				if (size>=length)
+				if (InternetQueryDataAvailable( hRequest, &size, 0, 0 ) && size)
 				{
-					DebugError("Buffer overflow checking returned content");
-				}
-				else
-				{
-					content[size] = '\0';
-					Debug("Server response:\n%s\n", content);
+					content = allocate( size+1, NULL );
+					if (InternetReadFile(hRequest, content, size, &size))
+					{
+						content[size] = '\0';
+						Debug2("Server response:\n%s", content);
+					}
+					else
+						InternetError("Failed to check returned content");
+					free(content);
 				}
 			}
 		}
@@ -489,32 +575,34 @@ static BOOLEAN SendToServer(LPSTR deviceid, LPGLPISERVER glpi)
 	if ( hInet != NULL && !InternetCloseHandle(hInet) )
 		DebugError("Got failure while closing Internet connection");
 
+	// Close connection handle
+	if ( hOpen != NULL && !InternetCloseHandle(hOpen) )
+		DebugError("Got failure while closing connection handle");
+
 	return result;
 }
 
 void SendRemote(LPSTR deviceid)
 {
 	int Length = 0, count = 0;
-	LPSTR separator, urlbuffer, cursor = conf.server;
+	LPSTR separator, cursor = conf.server;
 
 	Debug("Parsing inventory server: %s", cursor);
 
-	while (cursor != NULL)
+	while (cursor != NULL && *cursor != '\0')
 	{
-		// Prepare server url
-		Length = strlen(cursor);
+		// Prepare one server url from server list
 		separator = strstr(cursor, ",");
-		if (separator != NULL)
-		{
-			Length = separator - cursor;
-		}
-
-		urlbuffer = allocate( Length+2, NULL );
-		snprintf( urlbuffer, Length+1, "%s", cursor );
+		Length = separator != NULL ? separator - cursor : strlen(cursor);
 
 		if (Length != 0)
 		{
-			LPGLPISERVER lpGlpi = DecodeGlpiUrl(urlbuffer);
+			LPGLPISERVER lpGlpi;
+			LPSTR urlbuffer = allocate( Length+1, NULL );
+
+			_snprintf( urlbuffer, Length, "%s", cursor );
+
+			lpGlpi = DecodeGlpiUrl(urlbuffer);
 			if (lpGlpi == NULL)
 			{
 				Error("Can't decode '%s' URL", urlbuffer);
@@ -533,14 +621,12 @@ void SendRemote(LPSTR deviceid)
 				}
 				FreeGlpiUrl(lpGlpi);
 			}
+			free(urlbuffer);
 		}
 
-		free(urlbuffer);
-
-		if (separator == NULL)
-			break;
-
-		cursor = ++separator ;
+		cursor = separator ;
+		if (cursor != NULL)
+			cursor ++ ;
 	}
 
 	if (count>1)

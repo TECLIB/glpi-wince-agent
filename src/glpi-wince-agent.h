@@ -29,6 +29,8 @@
 // Define expiration delay to 10 minutes related to GetTickCount() API
 #define EXPIRATION_DELAY  (DWORD)600000
 
+#define GLPI_CONNECT_TIMEOUT	5000
+
 #include <iphlpapi.h>
 
 #include "sdk-extracted.h"
