@@ -207,6 +207,9 @@ void getBios(void)
 	else
 		DebugError("Can't load "sMOTOROLA_DLL" DLL");
 
+	// Add a bios type to help FI4GLPI proposing a device type
+	addField( Bios, "TYPE", "Embedded Terminal" );
+
 	// Insert Bios in inventory
 	InventoryAdd( "BIOS", Bios );
 
