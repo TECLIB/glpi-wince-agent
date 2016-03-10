@@ -2,14 +2,11 @@
 /*
  * Extracted from DataLogic SDK: DL_DEVICEAPI.H
  */
-#define wDATALOGIC_DLL	L"DLCEDevice.dll"
-#define sDATALOGIC_DLL	"DLCEDevice.dll"
+#define wDATALOGIC_DLL	L"DeviceApi.dll"
+#define sDATALOGIC_DLL	"DeviceApi.dll"
 
-#ifndef DLDEVICE_API
-#define DLDEVICE_API __declspec(dllimport)
-#endif
-
-DLDEVICE_API size_t DLDEVICE_GetSerialNumber(TCHAR* szBuf, size_t nStrDim);
+#define DATALOGIC_SERIAL_NUMBER_SIZE 17
+BOOL WINAPI DeviceGetSerialNumber(TCHAR* szBuf, size_t nStrDim);
 
 
 /*

@@ -143,30 +143,28 @@ void getBios(void)
 	hOEMDll = LoadLibrary(wDATALOGIC_DLL);
 	if (hOEMDll != NULL)
 	{
-		FARPROC DLDEVICE_GetSerialNumber = NULL;
+		FARPROC DeviceGetSerialNumber = NULL;
 
 		Debug2("Loading DataLogic GetSerialNumber API...");
-		DLDEVICE_GetSerialNumber = GetProcAddress( hOEMDll, L"DLDEVICE_GetSerialNumber" );
-		if (DLDEVICE_GetSerialNumber == NULL)
+		DeviceGetSerialNumber = GetProcAddress( hOEMDll, L"DeviceGetSerialNumber" );
+		if (DeviceGetSerialNumber == NULL)
 			DebugError("Can't import DataLogic GetSerialNumber() API");
 		else
 		{
-			buflen = DLDEVICE_GetSerialNumber( wInfo, 0 );
-			if (buflen>0)
+			buflen = DATALOGIC_SERIAL_NUMBER_SIZE + 1 ;
+			wInfo = allocate( 2*buflen, "DataLogic SerialNumber" );
+			DeviceGetSerialNumber( wInfo, DATALOGIC_SERIAL_NUMBER_SIZE );
+			buflen = wcslen(wInfo) ;
+			if (buflen)
 			{
-				wInfo = allocate( 2*(buflen+1), "DataLogic SerialNumber" );
-				DLDEVICE_GetSerialNumber( wInfo, buflen );
-				buflen = wcslen(wInfo) ;
-				if (buflen)
-				{
-					Info = allocate( buflen+1, "DataLogic SerialNumber");
-					wcstombs(Info, wInfo, buflen);
-					addField( Bios, "SSN", Info );
-					free(Info);
-				}
-				free(wInfo);
+				Info = allocate( buflen+1, "DataLogic SerialNumber");
+				wcstombs(Info, wInfo, buflen);
+				addField( Bios, "SSN", Info );
+				free(Info);
 			}
-			DLDEVICE_GetSerialNumber = NULL;
+			free(wInfo);
+
+			DeviceGetSerialNumber = NULL;
 		}
 
 		// Free DLL
