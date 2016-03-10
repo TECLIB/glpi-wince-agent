@@ -12,14 +12,13 @@ BOOL WINAPI DeviceGetSerialNumber(TCHAR* szBuf, size_t nStrDim);
 /*
  * Extracted from Motorola EMDK for C SDK: Strucinf.h, rcmdef.h & RcmCAPI.h
  */
-#define wMOTOROLA_DLL	L"RcmApi32.dll"
-#define sMOTOROLA_DLL	"RcmApi32.dll"
+#define wMOTOROLA_DLL	L"RCMAPI32.dll"
+#define sMOTOROLA_DLL	"RCMAPI32.dll"
 
 typedef struct tagSTRUCT_INFO
 {
 	DWORD	dwAllocated;				// Size of allocated structure in bytes
 	DWORD	dwUsed;						// Amount of structure actually used
-
 } STRUCT_INFO;
 
 typedef STRUCT_INFO * LPSTRUCT_INFO;
