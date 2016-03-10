@@ -196,6 +196,16 @@ static void setupMainPanel(HWND hWnd)
 		SendDlgItemMessage(dialog, IDC_EDIT_LOCAL, WM_SETTEXT, 0, (LPARAM)buffer );
 		free(buffer);
 	}
+
+	// Initialize tag editbox
+	len = conf.tag ? strlen(conf.tag) : 0 ;
+	if (len)
+	{
+		buffer = allocate(++len*2, "tag editbox");
+		wsprintf( buffer, L"%hs", conf.tag );
+		SendDlgItemMessage(dialog, IDC_EDIT_TAG, WM_SETTEXT, 0, (LPARAM)buffer );
+		free(buffer);
+	}
 }
 
 LRESULT CALLBACK WndProcedure(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
@@ -260,7 +270,7 @@ static void keepConfig(void)
 		{
 			conf.local = allocate( ++size, "Local config");
 			buffer = allocate( size*2, "Local config buffer");
-			SendDlgItemMessage(dialog, IDC_EDIT_LOCAL, WM_GETTEXT, (WPARAM)size, (LPARAM)conf.local );
+			SendDlgItemMessage(dialog, IDC_EDIT_LOCAL, WM_GETTEXT, (WPARAM)size, (LPARAM)buffer );
 			wcstombs(conf.local, buffer, size);
 			free(buffer);
 			Debug("Updated local config: %s", conf.local);
@@ -268,6 +278,26 @@ static void keepConfig(void)
 		else
 		{
 			conf.local = NULL;
+		}
+	}
+
+	if (SendDlgItemMessage(dialog, IDC_EDIT_TAG, EM_GETMODIFY, 0, 0 ))
+	{
+		Debug("Updating tag config");
+		free(conf.tag);
+		size = SendDlgItemMessage(dialog, IDC_EDIT_TAG, WM_GETTEXTLENGTH, 0, 0 );
+		if (size>0)
+		{
+			conf.tag = allocate( ++size, "Tag config");
+			buffer = allocate( size*2, "Tag config buffer");
+			SendDlgItemMessage(dialog, IDC_EDIT_TAG, WM_GETTEXT, (WPARAM)size, (LPARAM)buffer );
+			wcstombs(conf.tag, buffer, size);
+			free(buffer);
+			Debug("Updated tag config: %s", conf.tag);
+		}
+		else
+		{
+			conf.tag = NULL;
 		}
 	}
 }

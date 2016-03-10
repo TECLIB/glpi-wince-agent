@@ -26,6 +26,8 @@
 
 INVENTORY *Inventory = NULL;
 
+static void getTag(void);
+
 void RunInventory(void)
 {
 	// Free any previously done inventory and allocate fresh memory
@@ -39,6 +41,9 @@ void RunInventory(void)
 
 	// Add client version
 	addEntry( Inventory, "CONTENT", "VERSIONCLIENT", (LPVOID)AgentName );
+
+	// Add TAG information
+	getTag();
 
 	// Add network adapters
 	getNetworks();
@@ -170,6 +175,24 @@ void addEntry( ENTRY *node, LPCSTR path, LPCSTR key, LPVOID what )
 void InventoryAdd(LPCSTR key, ENTRY *node)
 {
 	addEntry( Inventory, key, NULL , node );
+}
+
+static void getTag(void)
+{
+	LIST *AccountInfo = NULL;
+
+	if (!strlen(conf.tag))
+		return;
+
+	// Initialize ACCOUNTINFO list
+	AccountInfo = createList("ACCOUNTINFO");
+
+	// Add TAG information
+	addField( AccountInfo, "KEYNAME", "TAG" );
+	addField( AccountInfo, "KEYVALUE", conf.tag );
+
+	// Insert AccountInfo in inventory
+	InventoryAdd( "ACCOUNTINFO", AccountInfo );
 }
 
 #ifdef DEBUG

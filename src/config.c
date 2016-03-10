@@ -31,17 +31,63 @@
 CONFIG conf = {
 	NULL,  // .server : GLPI Server URL
 	NULL,  // .local  : Local inventory folder
+	NULL,  // .tag    : Inventory tag
 	DEBUG, // .debug  : Default debug mode
 	FALSE
 };
 
 LPSTR configFile = NULL;
 
+static inline void strip(LPSTR string)
+{
+	LPSTR from = strchr(string, '\n');
+	while (from != NULL && *from <= ' ')
+		*from-- = '\0';
+}
+
+static LPSTR readvalue(LPSTR start, LPCSTR key)
+{
+	int len = 0;
+	LPSTR found = NULL, value = NULL;
+
+	// Test if we found server configuration
+	found = strstr(start, key);
+	if (found != NULL && found == start)
+	{
+		BOOL equal = FALSE;
+
+		found += strlen(key);
+
+		// Align & check we found equal sign, equal will leave false if found is empty
+		while (*found != '\0')
+		{
+			switch (*found)
+			{
+				case '=':
+					equal = TRUE;
+				case '\t':
+				case ' ':
+					found ++;
+					continue;
+			}
+			break;
+		}
+
+		if (equal)
+		{
+			len = strlen(found);
+			value = allocate(len+1, "config value");
+			strncpy(value, found, len+1);
+		}
+	}
+	return value;
+}
+
 CONFIG ConfigLoad(LPSTR path)
 {
 	FILE *hConfig;
 	LPSTR buffer, found, start;
-	CONFIG config = { NULL, NULL, DEBUG, FALSE };
+	CONFIG config = { NULL, NULL, NULL, DEBUG, FALSE };
 
 	// Initialize config file path
 	if (path != NULL)
@@ -83,10 +129,8 @@ CONFIG ConfigLoad(LPSTR path)
 		(fgets(buffer, MAX_LENGHT-1, hConfig) != NULL || !feof(hConfig))
 	)
 	{
-		// Strip buffer
-		start = strchr(buffer, '\n');
-		if (start != NULL)
-			*start = '\0';
+		// Strip line buffer
+		strip(buffer);
 
 		// Leave while at the end of config file and buffer is empty
 		if (feof(hConfig) && !strlen(buffer))
@@ -102,57 +146,49 @@ CONFIG ConfigLoad(LPSTR path)
 			continue;
 
 		// Test if we found debug level configuration
-		found = strstr(buffer, "debug");
+		found = strstr(start, "debug");
 		if (found != NULL && found == start)
 		{
-			if (sscanf(found, "debug = %d", &config.debug) != 1)
-				Error("Failed to read debug level from config file in: %s", buffer);
+			if (strlen(found) == 5)
+			{
+				// Set debug to 1 if we only found "debug" string on a line
+				config.debug = 1;
+			}
+			else if (sscanf(found, "debug = %d", &config.debug) != 1)
+			{
+				Error("Failed to read debug level from config file in line: %s", buffer);
+			}
+			Debug("Debug level in config: %d", config.debug);
 			continue;
 		}
 
 		// Test if we found server configuration
-		found = strstr(buffer, "server");
-		if (found != NULL && found == start)
+		found = readvalue(start, "server");
+		if (found != NULL)
 		{
-			found += 7;
-			while (*found == ' ' || *found == '=')
-				found ++;
 			free(config.server);
-			if (!strlen(found))
-			{
-				Debug("Empty string found for server");
-				config.server = NULL;
-			}
-			else
-			{
-				config.server = allocate(strlen(found)+1, "Server config");
-				*config.server = '\0';
-				strcat(config.server, found);
-				Debug("Server in config: %s", config.server);
-			}
+			config.server = found;
+			Debug("Server in config: %s", config.server);
 			continue;
 		}
 
 		// Test if we found local configuration
-		found = strstr(buffer, "local");
-		if (found != NULL && found == start)
+		found = readvalue(start, "local");
+		if (found != NULL)
 		{
-			found += 5;
-			while (*found == ' ' || *found == '=')
-				found ++;
 			free(config.local);
-			if (!strlen(found))
-			{
-				Debug("Empty string found for local");
-				config.local = NULL;
-			}
-			else
-			{
-				config.local = allocate(strlen(found)+1, "Local config");
-				*config.local = '\0';
-				strcat(config.local, found);
-				Debug("Local in config: %s", config.local);
-			}
+			config.local = found;
+			Debug("Local in config: %s", config.local);
+			continue;
+		}
+
+		// Test if we found tag configuration
+		found = readvalue(buffer, "tag");
+		if (found != NULL)
+		{
+			free(config.tag);
+			config.tag = found;
+			Debug("Tag in config: %s", config.tag);
 			continue;
 		}
 
@@ -161,6 +197,7 @@ CONFIG ConfigLoad(LPSTR path)
 	free(buffer);
 	fclose(hConfig);
 
+	Debug2("Configuration loaded");
 	config.loaded = TRUE;
 
 	// Check config
@@ -183,17 +220,20 @@ void ConfigSave(void)
 		return;
 	}
 
+	Debug2("Loading current saved config");
 	config = ConfigLoad(NULL);
 	if (	config.loaded
 			&& conf.debug == config.debug
-			&& !strcmp(conf.server, config.server)
-			&& !strcmp(conf.local, config.local)
+			&& lpstrcmp(conf.server,config.server)
+			&& lpstrcmp(conf.local,config.local)
+			&& lpstrcmp(conf.tag,config.tag)
 		)
 	{
 		Debug("Configuration didn't change, no need to save it");
 		Debug2("No change? debug: %d vs %d", conf.debug, config.debug);
 		Debug2("No change? server: %s vs %s", conf.server, config.server);
 		Debug2("No change? local: %s vs %s", conf.local, config.local);
+		Debug2("No change? tag: %s vs %s", conf.tag, config.tag);
 		return;
 	}
 
@@ -215,6 +255,11 @@ void ConfigSave(void)
 		fprintf(hConfig, "local = %s\n", conf.local);
 	else
 		fprintf(hConfig, "local = \n");
+
+	if (conf.tag != NULL)
+		fprintf(hConfig, "tag = %s\n", conf.tag);
+	else
+		fprintf(hConfig, "tag = \n");
 
 	fprintf(hConfig, "debug = %d\n", conf.debug);
 	fclose(hConfig);

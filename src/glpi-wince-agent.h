@@ -23,6 +23,7 @@
 #define IDC_EDIT_URL			1001
 #define IDC_EDIT_LOCAL			1002
 #define IDC_DEBUG_CONFIG		1003
+#define IDC_EDIT_TAG			1004
 
 #define IDC_STATIC (-1)
 
@@ -34,6 +35,10 @@
 #include <iphlpapi.h>
 
 #include "sdk-extracted.h"
+
+// Some macros
+#define lpstrcmp(x,y) \
+	((x == NULL && y == NULL)||(x != NULL && y != NULL && !strcmp(x,y)))
 
 /*
  * agent.c
@@ -50,6 +55,7 @@ LPSTR getDeviceID(void);
 typedef struct {
 	LPSTR server;		// GLPI server URL
 	LPSTR local;		// local path
+	LPSTR tag;			// client tag
 	int debug;			// debug level
 	BOOLEAN loaded;		// flag telling config has been loaded
 } CONFIG;
