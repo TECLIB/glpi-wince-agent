@@ -78,6 +78,10 @@ void getBios(void)
 		wcstombs(sOEMInfo, wInfo, buflen);
 		free(wInfo);
 
+		// Find sOEMInfo first word length to munafacturer name check
+		Info = strchr( sOEMInfo, ' ');
+		buflen = Info - sOEMInfo;
+
 		// Search if this manufacturer is known
 		while (++manufacturer<&Manufacturers[Man_END])
 		{
@@ -85,6 +89,11 @@ void getBios(void)
 			Debug2("Looking for %s in %s...", manufacturer->name, sOEMInfo);
 #endif
 			if (strstr(sOEMInfo, manufacturer->name) != NULL)
+				break;
+
+			// Also check first word can match but in case insensitive mode
+			if (strlen(manufacturer->name) == buflen &&
+					_strnicmp(sOEMInfo, manufacturer->name, buflen) == 0)
 				break;
 		}
 		if (manufacturer->id == Man_END)
