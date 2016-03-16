@@ -15,6 +15,8 @@ BOOL WINAPI DeviceGetSerialNumber(TCHAR* szBuf, size_t nStrDim);
 #define wMOTOROLA_DLL	L"RCMAPI32.dll"
 #define sMOTOROLA_DLL	"RCMAPI32.dll"
 
+#define E_RCM_SUCCESS	0x0
+
 typedef struct tagSTRUCT_INFO
 {
 	DWORD	dwAllocated;				// Size of allocated structure in bytes
@@ -34,6 +36,10 @@ typedef struct tagELECTRONIC_SERIAL_NUMBER
 } ELECTRONIC_SERIAL_NUMBER;
 
 typedef ELECTRONIC_SERIAL_NUMBER FAR * LPELECTRONIC_SERIAL_NUMBER;
+
+#define SI_ALLOC_ALL(ptr)  { (ptr)->StructInfo.dwAllocated = sizeof(*(ptr)); }
+#define SI_USED_NONE(ptr)  { (ptr)->StructInfo.dwUsed = sizeof(STRUCT_INFO); }
+#define SI_INIT(ptr)       { SI_ALLOC_ALL(ptr); SI_USED_NONE(ptr); }
 
 // Get Electronic Serial Number
 DWORD WINAPI RCM_GetESN(LPELECTRONIC_SERIAL_NUMBER lpESN);	// Pointer to ESN structure to fill

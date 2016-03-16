@@ -194,16 +194,26 @@ void getBios(void)
 			DebugError("Can't import Motorola GetESN() API");
 		else
 		{
+			DWORD ret;
 			ELECTRONIC_SERIAL_NUMBER eSN;
-			wsprintf( eSN.wszESN, L"" );
-			RCM_GetESN( &eSN );
-			buflen = wcslen(eSN.wszESN);
-			if (buflen)
+			memset(&eSN, 0, sizeof(eSN));
+			SI_INIT(&eSN);
+			ret = RCM_GetESN( &eSN );
+			if (ret != E_RCM_SUCCESS)
 			{
-				Info = allocate( buflen+1, "Motorola SerialNumber");
-				wcstombs(Info, eSN.wszESN, buflen);
-				addField( Bios, "SSN", Info );
-				free(Info);
+				DebugError("Motorola GetESN() API returned: %x", ret);
+			}
+			else
+			{
+				buflen = wcslen(eSN.wszESN);
+				if (buflen)
+				{
+					Info = allocate( buflen+1, "Motorola SerialNumber");
+					wcstombs(Info, eSN.wszESN, buflen+1);
+					addField( Bios, "SSN", Info );
+					free(Info);
+				}
+				Debug("ESN Infos: unused ESN slots: %d ; Error flag: %x", eSN.dwAvail, eSN.dwError);
 			}
 			RCM_GetESN = NULL;
 		}
