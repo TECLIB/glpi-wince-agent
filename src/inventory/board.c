@@ -49,7 +49,7 @@ void getBios(void)
 {
 	UINT buflen = DEFAULT_BUFSIZE;
 	LIST *Bios = NULL;
-	LPWSTR wInfo = NULL;
+	LPWSTR wInfo = NULL, wVersion = NULL;
 	LPSTR Info = NULL, sOEMInfo = NULL;
 	HINSTANCE hOEMDll = NULL;
 	LPMANUFACTURER manufacturer = &Manufacturers[Man_nosupport];
@@ -153,6 +153,7 @@ void getBios(void)
 	if (hOEMDll != NULL)
 	{
 		FARPROC DeviceGetSerialNumber = NULL;
+		FARPROC DeviceGetVersionInfo  = NULL;
 
 		Debug2("Loading DataLogic GetSerialNumber API...");
 		DeviceGetSerialNumber = GetProcAddress( hOEMDll, L"DeviceGetSerialNumber" );
@@ -160,10 +161,10 @@ void getBios(void)
 			DebugError("Can't import DataLogic GetSerialNumber() API");
 		else
 		{
-			buflen = DATALOGIC_SERIAL_NUMBER_SIZE + 1 ;
+			buflen = SERIAL_NUMBER_SIZE + 1 ;
 			wInfo = allocate( 2*buflen, "DataLogic SerialNumber" );
 			memset(wInfo, 0, 2*buflen);
-			if (DeviceGetSerialNumber( wInfo, DATALOGIC_SERIAL_NUMBER_SIZE ))
+			if (DeviceGetSerialNumber( wInfo, SERIAL_NUMBER_SIZE ))
 			{
 				Info = allocate( buflen+1, "DataLogic SerialNumber");
 				memset(Info, 0, buflen+1);
@@ -181,6 +182,64 @@ void getBios(void)
 			free(wInfo);
 
 			DeviceGetSerialNumber = NULL;
+		}
+
+		Debug2("Loading DataLogic DeviceGetVersionInfo API...");
+		DeviceGetVersionInfo = GetProcAddress( hOEMDll, L"DeviceGetVersionInfo" );
+		if (DeviceGetVersionInfo == NULL)
+			DebugError("Can't import DataLogic DeviceGetVersionInfo() API");
+		else
+		{
+			buflen = VERSION_LABEL_SIZE + 1 ;
+			wInfo = allocate( 2*buflen, "DataLogic Firmware Label" );
+			memset(wInfo, 0, 2*buflen);
+			buflen = VERSION_SIZE + 1 ;
+			wVersion = allocate( 2*buflen, "DataLogic Firmware Version" );
+			memset(wVersion, 0, 2*buflen);
+			if (DeviceGetVersionInfo( VERSION_INDEX_FIRMWARE,
+				  wInfo, VERSION_LABEL_SIZE, wVersion, VERSION_SIZE ))
+			{
+				// Retrieve version label
+				Info = allocate( VERSION_LABEL_SIZE+1, "DataLogic Firmware Label");
+				memset(Info, 0, VERSION_LABEL_SIZE+1);
+				wcstombs(Info, wInfo, VERSION_LABEL_SIZE);
+
+				// Retrieve version number
+				sOEMInfo = allocate( VERSION_SIZE+1, "DataLogic Firmware Label");
+				memset(sOEMInfo, 0, VERSION_SIZE+1);
+				wcstombs(sOEMInfo, wVersion, VERSION_SIZE);
+
+				if (strlen(Info))
+				{
+					if (strlen(sOEMInfo))
+					{
+						addField(Bios, "BVERSION", vsPrintf("%s %s", Info, sOEMInfo));
+					}
+					else
+					{
+						Debug("Got empty DataLogic Version for Number");
+						addField(Bios, "BVERSION", Info);
+					}
+				}
+				else
+				{
+					if (strlen(sOEMInfo))
+					{
+						Debug("Got empty DataLogic Version for Label");
+						addField(Bios, "BVERSION", sOEMInfo);
+					}
+					else
+					{
+						Debug("Got empty DataLogic Version for Label & Number");
+					}
+				}
+				free(Info);
+				free(sOEMInfo);
+			}
+			free(wInfo);
+			free(wVersion);
+
+			DeviceGetVersionInfo = NULL;
 		}
 
 		// Free DLL

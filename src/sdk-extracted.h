@@ -1,11 +1,17 @@
 
 /*
- * Extracted from DataLogic SDK: DL_DEVICEAPI.H
+ * Extracted from DataLogic SDK: deviceApi.h
  */
 #define wDATALOGIC_DLL	L"DeviceApi.dll"
 #define sDATALOGIC_DLL	"DeviceApi.dll"
 
-#define DATALOGIC_SERIAL_NUMBER_SIZE 17
+#define VERSION_LABEL_SIZE		24		// Maximum version label length (including NULL)
+#define VERSION_SIZE			5		// Short version string: X.XX + NULL terminator
+#define SERIAL_NUMBER_SIZE		17		// Serial number plus NULL terminator
+
+#define VERSION_INDEX_FIRMWARE	0		// Index for firmware version
+
+BOOL WINAPI DeviceGetVersionInfo(DWORD index, WCHAR *label, int labelLen, WCHAR *version, int versionLen);
 BOOL WINAPI DeviceGetSerialNumber(TCHAR* szBuf, size_t nStrDim);
 
 
