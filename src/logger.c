@@ -113,7 +113,7 @@ void LoggerQuit(void)
 	Log( "Stopping logger..." );
 	if( hLogger != NULL )
 		fclose( hLogger );
-	Log( "Logger stopped" );
+	bLoggerInit = FALSE;
 
 	// Free buffers
 	free(lpErrorBuf);
