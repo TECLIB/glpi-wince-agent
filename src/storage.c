@@ -221,13 +221,11 @@ void saveState(LPSTR deviceid)
 
 		fclose(hStorage);
 	}
-
-	// We shouldn't have to keep this until next restart
-	free(StorageFile);
 }
 
 void StorageQuit(void)
 {
+	Debug2("Freeing Storage");
 	free(VarDir);
 	free(StorageFile);
 }
