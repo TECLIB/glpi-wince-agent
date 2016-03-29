@@ -181,7 +181,7 @@ static void getTag(void)
 {
 	LIST *AccountInfo = NULL;
 
-	if (!strlen(conf.tag))
+	if (!conf.tag || !strlen(conf.tag))
 		return;
 
 	// Initialize ACCOUNTINFO list
