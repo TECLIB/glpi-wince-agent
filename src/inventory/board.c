@@ -163,13 +163,19 @@ void getBios(void)
 			buflen = DATALOGIC_SERIAL_NUMBER_SIZE + 1 ;
 			wInfo = allocate( 2*buflen, "DataLogic SerialNumber" );
 			memset(wInfo, 0, 2*buflen);
-			buflen = DeviceGetSerialNumber( wInfo, DATALOGIC_SERIAL_NUMBER_SIZE );
-			if (buflen)
+			if (DeviceGetSerialNumber( wInfo, DATALOGIC_SERIAL_NUMBER_SIZE ))
 			{
 				Info = allocate( buflen+1, "DataLogic SerialNumber");
 				memset(Info, 0, buflen+1);
 				wcstombs(Info, wInfo, buflen);
-				addField( Bios, "SSN", Info );
+				if (strlen(Info))
+				{
+					addField( Bios, "SSN", Info );
+				}
+				else
+				{
+					Debug("Got empty DataLogic SerialNumber");
+				}
 				free(Info);
 			}
 			free(wInfo);
