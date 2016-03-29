@@ -50,6 +50,7 @@ void TargetInit(LPSTR deviceid)
 
 void TargetQuit(void)
 {
+	Debug2("Freeing Target");
 	free(Xml);
 }
 

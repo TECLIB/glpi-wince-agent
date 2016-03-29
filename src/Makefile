@@ -5,10 +5,11 @@ ARCH    = arm-mingw32ce
 CC      = ${ARCH}-gcc
 WINDRES = ${ARCH}-windres
 STRIP   = ${ARCH}-strip
-CFLAGS  = -g ${STATIC} ${DEBUG} -Wall -DWIN32 -D_WIN32_WINNT=0x0501
+CFLAGS  = -g ${STATIC} ${DEBUG}${TEST} -Wall -DWIN32 -D_WIN32_WINNT=0x0501
 LIBS    = -lcommctrl -liphlpapi -lws2 -lwininet
 STATIC  = 
 DEBUG   = 
+TEST    = 
 
 OBJECTS = glpi-wince-agent.o agent.o config.o constants.o logger.o tools.o \
 	storage.o inventory.o inventory/network.o inventory/board.o target.o

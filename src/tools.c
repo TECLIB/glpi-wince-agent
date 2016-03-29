@@ -153,6 +153,7 @@ void ToolsInit(void)
 
 void ToolsQuit(void)
 {
+	Debug2("Freeing Tools");
 	free(lpLocalTime);
 	free(pFixedInfo);
 	free(sHostname);

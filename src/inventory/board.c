@@ -383,13 +383,13 @@ void CheckDeviceId(LPMANUFACTURER manufacturer, LIST *list)
 	{
 		if (!DeviceID.dwSize)
 		{
-			DebugError("Failed to retreive DeviceID");
+			DebugError("Can't retrieve Device_ID structure");
 			return;
 		}
 	}
 	else
 	{
-		DebugError("Unexpected response while requesting DeviceID structure size");
+		DebugError("Unexpected response while requesting Device_ID structure size");
 		return;
 	}
 
@@ -400,18 +400,14 @@ void CheckDeviceId(LPMANUFACTURER manufacturer, LIST *list)
 
 	if ( bGet && dwOutSizeOf > 0 )
 	{
-#ifdef DEBUG
 		RawDebug("DeviceID struct: %s", (LPBYTE)pDeviceID, DeviceID.dwSize);
-#endif
 
 		if ( pDeviceID->dwPresetIDBytes > 0 )
 		{
-			Debug2("Size of Terminal ID: %d", pDeviceID->dwPresetIDBytes);
+			Debug("Size of Terminal ID: %d", pDeviceID->dwPresetIDBytes);
 			pTerminalID = (PULONG)((BYTE *)pDeviceID + pDeviceID->dwPresetIDOffset);
-			Debug2("Found TerminalID: %lu", *pTerminalID);
-#ifdef DEBUG
+			Debug("Found TerminalID: %lu", *pTerminalID);
 			RawDebug("Raw TerminalID: %s", (LPBYTE)pTerminalID, pDeviceID->dwPresetIDBytes);
-#endif
 		}
 		else
 		{
@@ -420,7 +416,7 @@ void CheckDeviceId(LPMANUFACTURER manufacturer, LIST *list)
 
 		if ( pDeviceID->dwPlatformIDBytes > 0 )
 		{
-			Debug2("Size of PlatformID: %d", pDeviceID->dwPlatformIDBytes);
+			Debug("Size of PlatformID: %d", pDeviceID->dwPlatformIDBytes);
 			size = pDeviceID->dwPlatformIDBytes / sizeof(WCHAR);
 			szPlatformID = allocate(size+1, "PlatformID");
 
@@ -430,9 +426,7 @@ void CheckDeviceId(LPMANUFACTURER manufacturer, LIST *list)
 				wcstombs(szPlatformID, (LPWSTR)pPlatformID, size);
 				Debug("Found PlatformID: %s", szPlatformID);
 				free(szPlatformID);
-#ifdef DEBUG
 				RawDebug("Raw PlatformID: %s", (LPBYTE)pPlatformID, pDeviceID->dwPlatformIDBytes);
-#endif
 			}
 		}
 		else
@@ -449,7 +443,7 @@ void CheckDeviceId(LPMANUFACTURER manufacturer, LIST *list)
 			strcat(sIMEI, hexstring(((LPBYTE)pDeviceID)+32, 6));
 			// Last char could be skipped
 			sIMEI[strlen(sIMEI)-1] = '\0';
-			Debug2("Found HTC IMEI: %s", sIMEI);
+			Debug("Found HTC IMEI: %s", sIMEI);
 			addField( list, "IMEI", sIMEI );
 		}
 	}

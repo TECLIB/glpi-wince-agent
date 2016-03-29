@@ -32,8 +32,12 @@ CONFIG conf = {
 	NULL,  // .server : GLPI Server URL
 	NULL,  // .local  : Local inventory folder
 	NULL,  // .tag    : Inventory tag
+#ifndef TEST
 	DEBUG, // .debug  : Default debug mode
-	FALSE
+#else
+	1,
+#endif
+	FALSE  // .loaded : not loaded at start
 };
 
 LPSTR configFile = NULL;
@@ -267,6 +271,7 @@ void ConfigSave(void)
 
 void ConfigQuit(void)
 {
+	Debug2("Freeing Config");
 	free(configFile);
 	free(conf.server);
 	free(conf.local);
