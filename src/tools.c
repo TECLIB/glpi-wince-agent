@@ -25,6 +25,7 @@
 #include "glpi-wince-agent.h"
 
 #define MAX_VS_SIZE 256
+#define MAX_TS_SIZE 40
 
 static DWORD dwStartTick = 0;
 static LPSTR sHostname = NULL;
@@ -118,7 +119,8 @@ LPSTR getHostname(void)
 // Timestamp to be used while debugging
 LPSTR getTimestamp(void)
 {
-	LPSTR timestamp = NULL;
+	static char timestamp[MAX_TS_SIZE];
+	int length = 0;
 	LPSYSTEMTIME lpLocalTime = NULL;
 
 	lpLocalTime = getLocalTime();
@@ -127,7 +129,8 @@ LPSTR getTimestamp(void)
 	{
 		// Insert accurate time since agent was started
 		DWORD ticks = GetTickCount() - dwStartTick;
-		timestamp = vsPrintf(
+		length = _snprintf(
+			timestamp, MAX_TS_SIZE-1,
 			"%4d-%02d-%02d %02d:%02d:%02d: %li.%03li: ",
 			lpLocalTime->wYear, lpLocalTime->wMonth, lpLocalTime->wDay,
 			lpLocalTime->wHour, lpLocalTime->wMinute, lpLocalTime->wSecond,
@@ -136,12 +139,18 @@ LPSTR getTimestamp(void)
 	}
 	else
 	{
-		timestamp = vsPrintf(
+		length = _snprintf(
+			timestamp, MAX_TS_SIZE-1,
 			"%4d-%02d-%02d %02d:%02d:%02d: ",
 			lpLocalTime->wYear, lpLocalTime->wMonth, lpLocalTime->wDay,
 			lpLocalTime->wHour, lpLocalTime->wMinute, lpLocalTime->wSecond
 		);
 	}
+
+	// Guaranty to keep a NULL terminated string
+	if (length == MAX_TS_SIZE-1 || length < 0)
+		timestamp[MAX_TS_SIZE-1] = '\0';
+
 	return timestamp;
 }
 
