@@ -24,6 +24,7 @@ glpi-wince-agent.exe: ${OBJECTS} glpi-wince-agent.rsc
 
 glpi-wince-agent-setup.dll: glpi-wince-agent-setup.c
 	${CC} -shared ${CFLAGS} -o $@ $?
+	${STRIP} $@
 
 %.o: %.c
 	${CC} ${CFLAGS} -c -o $@ $?
