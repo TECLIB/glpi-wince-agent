@@ -1,5 +1,8 @@
 #! /bin/bash
 
+let TEST=0
+[ "$1" == "--test" ] && let TEST++
+
 set -e
 
 # Change to project folder
@@ -47,7 +50,11 @@ fi
 tools/cabwiz glpi-wince-agent.inf /v
 
 # Rename produced CAB file
-mv -vf GLPI-Agent.CAB glpi-wince-agent-v$MAJOR.$MINOR.cab
+if (( TEST )); then
+	mv -vf GLPI-Agent.CAB glpi-agent-test-v$MAJOR.$MINOR.cab
+else
+	mv -vf GLPI-Agent.CAB glpi-agent-v$MAJOR.$MINOR.cab
+fi
 
 # Cleanup
 rm -f glpi-wince-agent.inf
