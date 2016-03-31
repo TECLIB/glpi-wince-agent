@@ -1,6 +1,6 @@
 
-#define MAJOR_VERSION	0
-#define MINOR_VERSION	9
+#define MAJOR_VERSION	1
+#define MINOR_VERSION	0
 
 #define STRING(s)			#s
 #define XSTRING(s)			STRING(s)
