@@ -22,6 +22,9 @@ strip: glpi-wince-agent.exe
 glpi-wince-agent.exe: ${OBJECTS} glpi-wince-agent.rsc
 	${CC} ${CFLAGS} -o $@ ${OBJECTS} glpi-wince-agent.rsc ${LIBS}
 
+glpi-wince-agent-setup.dll: glpi-wince-agent-setup.c
+	${CC} -shared ${CFLAGS} -o $@ $?
+
 %.o: %.c
 	${CC} ${CFLAGS} -c -o $@ $?
 
@@ -29,6 +32,6 @@ glpi-wince-agent.rsc: glpi-wince-agent.rc glpi-wince-agent.h
 	${WINDRES} ${DEBUG} glpi-wince-agent.rc glpi-wince-agent.rsc
 
 clean:
-	@rm -vf *.o *.exe *.rsc inventory/*.o
+	@rm -vf *.o *.exe *.dll *.rsc inventory/*.o
 
 .PHONY: all strip clean

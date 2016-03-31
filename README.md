@@ -24,3 +24,5 @@ provides a WinCE emulator on which we can test the software. It can be started u
 
 ## Other resources
  - [Shared Source Microsoft Device Emulator 1.0 Release](https://www.microsoft.com/en-us/download/details.aspx?id=10865)
+ - [lcab](https://launchpad.net/lcab)
+ - [cabwiz](https://github.com/Turbo87/cabwiz)

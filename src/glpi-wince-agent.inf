@@ -1,0 +1,50 @@
+[Version]
+Signature = "$Windows NT$"
+Provider = "Teclib"
+CESignature = "$Windows CE$"
+
+[CEStrings]
+AppName = "GLPI-Agent"
+; %CE1% = \Program Files\
+InstallDir = "%CE1%\%AppName%"
+
+[Strings]
+reg_path = Software\Teclib\GLPI-Agent
+LinkFilename = "GLPI-Agent"
+AgentVersion = "__VERSION__"
+
+[CEDevice]
+ProcessorType=2577 ; PROCESSOR_STRONGARM
+VersionMin = 5.0
+VersionMax = 32767.0
+; prevent warnings on screen resolution
+BuildMax = 0xE0000000
+
+[SourceDisksNames]
+1 = ,"Sources",,src
+
+[SourceDisksFiles]
+glpi-wince-agent.exe = 1
+glpi-wince-agent-setup.dll = 1
+
+[DefaultInstall]
+CopyFiles = AgentFile
+CEShortcuts = Links
+AddReg = AddRegistry
+CESetupDLL=glpi-wince-agent-setup.dll
+
+[DestinationDirs]
+; See https://msdn.microsoft.com/en-us/library/ee504636.aspx for %CEXY%
+AgentFile = 0, %InstallDir%
+Links = 0, %CE11% ; "\Windows\Start Menu" directory
+
+[AgentFile]
+glpi-wince-agent.exe
+
+[AddRegistry]
+HKLM,%reg_path%,InstallDir,0x00000000,%InstallDir%
+HKLM,%reg_path%,Version,0x00000000,%AgentVersion%
+
+[Links]
+; shortcut to a file, created in the standard destination path %CE11% (/Windows/Start Menu/)
+%LinkFilename%,0,"glpi-wince-agent.exe",%CE11%

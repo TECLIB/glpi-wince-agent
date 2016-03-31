@@ -13,6 +13,15 @@ test:
 clean:
 	@$(MAKE) -w -C src clean
 
+setup:
+	@$(MAKE) -w -C src glpi-wince-agent-setup.dll STATIC=-static
+
+cab:
+	@$(MAKE) clean
+	@$(MAKE) setup
+	@$(MAKE) all
+	@tools/makecab-release.sh
+
 release:
 	@$(MAKE) -w -C src clean
 	@$(MAKE) debug
@@ -26,4 +35,4 @@ release:
 
 glpi-wince-agent.tar.gz: README.md Makefile src/*.{c,h,rc}
 
-.PHONY: all debug clean release test
+.PHONY: all debug clean release test cab

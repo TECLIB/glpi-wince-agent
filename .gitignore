@@ -1,4 +1,12 @@
 env.sh
 *.o
 *.exe
+*.dll
 *.rsc
+*.tar.gz
+*.cab
+*.zip
+lcab
+cabwiz
+*.py
+*.pyc
