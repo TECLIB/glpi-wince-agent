@@ -208,6 +208,7 @@ void WriteLocal(LPSTR deviceid)
 			}
 
 			buffer = allocate( Length+1, NULL );
+			memset(buffer, 0, Length+1);
 			_snprintf( buffer, Length, "%s", cursor );
 			LocalFile = vsPrintf("%s\\%s.ocs", buffer, deviceid);
 			free(buffer);
@@ -274,6 +275,7 @@ static LPGLPISERVER DecodeGlpiUrl(LPCSTR url)
 
 	// Copy server name
 	lpGlpi->server = allocate(Url.dwHostNameLength+1, NULL);
+	memset(lpGlpi->server, 0, Url.dwHostNameLength+1);
 	_snprintf( lpGlpi->server, Url.dwHostNameLength, "%s", Url.lpszHostName);
 	Debug2("Extracted server name: %s", lpGlpi->server);
 
@@ -281,6 +283,7 @@ static LPGLPISERVER DecodeGlpiUrl(LPCSTR url)
 	if (Url.dwUserNameLength)
 	{
 		lpGlpi->username = allocate(Url.dwUserNameLength+1, NULL);
+		memset(lpGlpi->username, 0, Url.dwUserNameLength+1);
 		_snprintf( lpGlpi->username, Url.dwUserNameLength, "%s", Url.lpszUserName);
 		Debug2("Extracted username: %s", lpGlpi->username);
 	}
@@ -291,6 +294,7 @@ static LPGLPISERVER DecodeGlpiUrl(LPCSTR url)
 	if (Url.dwPasswordLength)
 	{
 		lpGlpi->password = allocate(Url.dwPasswordLength+1, NULL);
+		memset(lpGlpi->password, 0, Url.dwPasswordLength+1);
 		_snprintf( lpGlpi->password, Url.dwPasswordLength, "%s", Url.lpszPassword);
 		Debug2("Extracted password: %s", lpGlpi->password);
 	}
@@ -600,7 +604,7 @@ void SendRemote(LPSTR deviceid)
 		{
 			LPGLPISERVER lpGlpi;
 			LPSTR urlbuffer = allocate( Length+1, NULL );
-
+			memset(urlbuffer, 0, Length+1);
 			_snprintf( urlbuffer, Length, "%s", cursor );
 
 			lpGlpi = DecodeGlpiUrl(urlbuffer);
