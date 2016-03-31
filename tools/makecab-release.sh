@@ -16,14 +16,15 @@ if [ ! -x tools/lcab ]; then
 	SRCS="${LCAB_URL##*/}"
 	if [ ! -d lcab ]; then
 		[ -e "$SRCS" ] || wget -nd "$LCAB_URL"
-		tar xzf "$SRCS"
-		mv -vf "${SRCS%.orig.tar.gz}" lcab
+		mkdir lcab
+		tar xzf "$SRCS" --strip-components=1 -d lcab
 	fi
 	cd lcab
 	./configure
 	make
 	mv lcab ../tools
 	cd ..
+	rm -rf lcab
 fi
 
 # Check we have cabwiz replacement tool under tools folder
