@@ -17,7 +17,7 @@ if [ ! -x tools/lcab ]; then
 	if [ ! -d lcab ]; then
 		[ -e "$SRCS" ] || wget -nd "$LCAB_URL"
 		tar xzf "$SRCS"
-		mv -vf "${SRC%.orig.tar.gz}" lcab
+		mv -vf "${SRCS%.orig.tar.gz}" lcab
 	fi
 	cd lcab
 	./configure
