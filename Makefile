@@ -23,15 +23,16 @@ cab:
 	@tools/makecab-release.sh
 
 release:
-	@$(MAKE) -w -C src clean
+	@$(MAKE) clean
 	@$(MAKE) debug
 	@mv -vf src/glpi-wince-agent.exe glpi-wince-agent-debug.exe
-	@$(MAKE) -w -C src clean
+	@$(MAKE) clean
 	@$(MAKE) all
 	@mv -vf src/glpi-wince-agent.exe glpi-wince-agent.exe
-	@$(MAKE) -w -C src clean
+	@$(MAKE) clean
 	@$(MAKE) test
 	@mv -vf src/glpi-wince-agent.exe glpi-wince-agent-test.exe
+	@$(MAKE) cab
 
 glpi-wince-agent.tar.gz: README.md Makefile src/*.{c,h,rc}
 
