@@ -24,14 +24,10 @@
 
 #include "glpi-wince-agent.h"
 
-#define MAX_TS_SIZE 16
 #define MAX_VS_SIZE 256
-
-LPSYSTEMTIME lpLocalTime = NULL;
 
 static DWORD dwStartTick = 0;
 static LPSTR sHostname = NULL;
-static LPSTR timestamp = NULL ;
 
 PFIXED_INFO pFixedInfo = NULL;
 
@@ -122,44 +118,50 @@ LPSTR getHostname(void)
 // Timestamp to be used while debugging
 LPSTR getTimestamp(void)
 {
-#ifdef DEBUG
+	LPSTR timestamp = NULL;
+	LPSYSTEMTIME lpLocalTime = NULL;
+
+	lpLocalTime = getLocalTime();
+
 	if (conf.debug)
 	{
+		// Insert accurate time since agent was started
 		DWORD ticks = GetTickCount() - dwStartTick;
-		_snprintf(timestamp, MAX_TS_SIZE-1, "%li.%03li: ", ticks/1000, ticks%1000);
+		timestamp = vsPrintf(
+			"%4d-%02d-%02d %02d:%02d:%02d: %li.%03li: ",
+			lpLocalTime->wYear, lpLocalTime->wMonth, lpLocalTime->wDay,
+			lpLocalTime->wHour, lpLocalTime->wMinute, lpLocalTime->wSecond,
+			ticks/1000, ticks%1000
+		);
 	}
-#endif
+	else
+	{
+		timestamp = vsPrintf(
+			"%4d-%02d-%02d %02d:%02d:%02d: ",
+			lpLocalTime->wYear, lpLocalTime->wMonth, lpLocalTime->wDay,
+			lpLocalTime->wHour, lpLocalTime->wMinute, lpLocalTime->wSecond
+		);
+	}
 	return timestamp;
 }
 
 LPSYSTEMTIME getLocalTime(void)
 {
-	free(lpLocalTime);
-	lpLocalTime = allocate(sizeof(SYSTEMTIME), "LocalTime");
-	GetLocalTime(lpLocalTime);
-	return lpLocalTime;
+	static SYSTEMTIME __systemtime ;
+	GetLocalTime(&__systemtime);
+	return &__systemtime;
 }
 
 void ToolsInit(void)
 {
 	dwStartTick = GetTickCount();
-#ifdef DEBUG
-	timestamp = allocate( MAX_TS_SIZE, NULL);
-	*timestamp = '\0';
-#else
-	timestamp = "";
-#endif
 }
 
 void ToolsQuit(void)
 {
 	Debug2("Freeing Tools");
-	free(lpLocalTime);
 	free(pFixedInfo);
 	free(sHostname);
-#ifdef DEBUG
-	free(timestamp);
-#endif
 }
 
 LPSTR vsPrintf( LPCSTR fmt, ... ) {
