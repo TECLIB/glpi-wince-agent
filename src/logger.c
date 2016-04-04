@@ -123,7 +123,7 @@ void LoggerQuit(void)
 
 void Log(LPCSTR format, ...)
 {
-	int size, formatsize;
+	int size;
 
 	va_list args;
 	va_start(args, format);
@@ -131,7 +131,6 @@ void Log(LPCSTR format, ...)
 	if (!bLoggerInit)
 		return;
 
-	formatsize = strlen(format);
 	size = vsprintf((LPSTR)lpLogBuffer, format, args);
 
 	if (size && size<1024)
@@ -153,7 +152,7 @@ void Log(LPCSTR format, ...)
 
 void Error(LPCSTR format, ...)
 {
-	int size, formatsize;
+	int size;
 
 	va_list args;
 	va_start(args, format);
@@ -161,7 +160,6 @@ void Error(LPCSTR format, ...)
 	if (!bLoggerInit)
 		return;
 
-	formatsize = strlen(format);
 	size = vsprintf((LPSTR)lpLogBuffer, format, args);
 
 	if (size && size<1024)
@@ -191,7 +189,7 @@ void Error(LPCSTR format, ...)
 
 void Debug(LPCSTR format, ...)
 {
-	int size, formatsize;
+	int size;
 
 	va_list args;
 	va_start(args, format);
@@ -199,7 +197,6 @@ void Debug(LPCSTR format, ...)
 	if (!conf.debug || !bLoggerInit)
 		return;
 
-	formatsize = strlen(format);
 	size = vsprintf((LPSTR)lpLogBuffer, format, args);
 
 	if (size && size<1024)
@@ -215,7 +212,7 @@ void Debug(LPCSTR format, ...)
 
 void Debug2(LPCSTR format, ...)
 {
-	int size, formatsize;
+	int size;
 
 	va_list args;
 	va_start(args, format);
@@ -223,7 +220,6 @@ void Debug2(LPCSTR format, ...)
 	if (conf.debug<2 || !bLoggerInit)
 		return;
 
-	formatsize = strlen(format);
 	size = vsprintf((LPSTR)lpLogBuffer, format, args);
 
 	if (size && size<1024)
@@ -239,7 +235,7 @@ void Debug2(LPCSTR format, ...)
 
 void DebugError(LPCSTR format, ...)
 {
-	int size, formatsize;
+	int size;
 
 	va_list args;
 	va_start(args, format);
@@ -247,7 +243,6 @@ void DebugError(LPCSTR format, ...)
 	if (!conf.debug || !bLoggerInit)
 		return;
 
-	formatsize = strlen(format);
 	size = vsprintf((LPSTR)lpLogBuffer, format, args);
 
 	if (size && size<1024)
