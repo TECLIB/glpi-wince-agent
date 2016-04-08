@@ -24,20 +24,26 @@
 
 #include "glpi-wince-agent.h"
 
-#ifndef DEBUG
-#define DEBUG 0
+#ifdef DEBUG
+#define DEFAULTDEBUG 2
+#else
+#ifdef TEST
+#ifdef GWA
+#define DEFAULTDEBUG 2
+#else
+#define DEFAULTDEBUG 1
+#endif
+#else
+#define DEFAULTDEBUG 0
+#endif
 #endif
 
 CONFIG conf = {
-	NULL,  // .server : GLPI Server URL
-	NULL,  // .local  : Local inventory folder
-	NULL,  // .tag    : Inventory tag
-#ifndef TEST
-	DEBUG, // .debug  : Default debug mode
-#else
-	1,
-#endif
-	FALSE  // .loaded : not loaded at start
+	NULL,         // .server : GLPI Server URL
+	NULL,         // .local  : Local inventory folder
+	NULL,         // .tag    : Inventory tag
+	DEFAULTDEBUG, // .debug  : Default debug mode
+	FALSE         // .loaded : not loaded at start
 };
 
 LPSTR configFile = NULL;
@@ -91,11 +97,15 @@ CONFIG ConfigLoad(LPSTR path)
 {
 	FILE *hConfig;
 	LPSTR buffer, found, start;
-	CONFIG config = { NULL, NULL, NULL, DEBUG, FALSE };
+	CONFIG config = { NULL, NULL, NULL, DEFAULTDEBUG, FALSE };
 
 	// Initialize config file path
-	if (path != NULL)
+	if (configFile == NULL && path != NULL)
 	{
+#ifdef STDERR
+		stderrf( "path='%s'", path );
+#endif
+
 		configFile = allocate(strlen(path)+strlen(DefaultConfigFile)+2, "config file");
 		sprintf(configFile, "%s\\%s", path, DefaultConfigFile);
 		Debug("Config file: %s", configFile);
@@ -117,6 +127,10 @@ CONFIG ConfigLoad(LPSTR path)
 		Error("Can't load not defined configuration filename");
 		return config;
 	}
+
+#ifdef STDERR
+		stderrf( "configFile='%s'", configFile );
+#endif
 
 	hConfig = fopen( configFile, "r" );
 	if( hConfig == NULL )
@@ -267,6 +281,9 @@ void ConfigSave(void)
 
 	fprintf(hConfig, "debug = %d\n", conf.debug);
 	fclose(hConfig);
+
+	// Loaded conf is synchronized with saved one, flag it loaded
+	conf.loaded = TRUE;
 }
 
 void ConfigQuit(void)
@@ -275,4 +292,10 @@ void ConfigQuit(void)
 	free(configFile);
 	free(conf.server);
 	free(conf.local);
+	free(conf.tag);
+
+	configFile  = NULL;
+	conf.server = NULL;
+	conf.local  = NULL;
+	conf.tag    = NULL;
 }

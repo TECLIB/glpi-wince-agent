@@ -306,7 +306,7 @@ void DoMenuActions(HWND w, INT id)
 {
 	switch (id) {
 		case IDOK:
-			Run();
+			RequestRun();
 			Quit();
 			PostQuitMessage(WM_QUIT);
 			break;
@@ -315,18 +315,16 @@ void DoMenuActions(HWND w, INT id)
 			PostQuitMessage(WM_QUIT);
 			break;
 		case IDM_MENU_RUN:
-			Run();
-			break;
-		case IDM_MENU_DOINVENTORY:
-			RunInventory();
+			RequestRun();
 			break;
 		case IDM_MENU_SAVECONFIG:
 			keepConfig();
 			ConfigSave();
+			Refresh(); // Ask service to refresh the con
 			break;
 #ifdef DEBUG
 		case IDM_MENU_DEBUGINVENTORY:
-			DebugInventory();
+			RunDebugInventory();
 			break;
 #endif
 	}

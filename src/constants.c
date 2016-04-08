@@ -24,10 +24,10 @@
 
 #include "glpi-wince-agent.h"
 
-LPCSTR AppName    = "glpi-wince-agent";
-LPCSTR AgentName  = "GLPI-Agent v"VERSION;
+LPCSTR AppName    = APPNAME;
+LPCSTR AgentName  = APPNAME " v" VERSION;
 
-LPCSTR InstallPath = "\\Program Files\\GLPI-Agent" ;
-LPCSTR DefaultConfigFile  = "glpi-agent.txt";
+LPCSTR InstallPath        = DEFAULTINSTALLPATH ;
+LPCSTR DefaultConfigFile  = APPNAME "-config.txt";
 
-LPCSTR DefaultVarDir = "var";
+LPCSTR DefaultVarDir      = DEFAULTVARDIR ;

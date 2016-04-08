@@ -1,7 +1,9 @@
 env.sh
 *.o
+*.lo
 *.exe
 *.dll
+*.dis
 *.rsc
 *.tar.gz
 *.cab

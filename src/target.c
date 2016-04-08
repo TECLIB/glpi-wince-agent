@@ -40,6 +40,7 @@ typedef struct {
 void TargetInit(LPSTR deviceid)
 {
 	// Initialize XML content
+	free(Xml);
 	Xml = createList( "REQUEST" );
 	addField( Xml, "DEVICEID", deviceid );
 	addField( Xml, "QUERY", "INVENTORY" );
@@ -52,6 +53,8 @@ void TargetQuit(void)
 {
 	Debug2("Freeing Target");
 	free(Xml);
+
+	Xml = NULL;
 }
 
 static LPSTR getListContent(LIST *list, LPSTR buffer, int indent, LPLONG size)
@@ -210,6 +213,10 @@ void WriteLocal(LPSTR deviceid)
 			buffer = allocate( Length+1, NULL );
 			memset(buffer, 0, Length+1);
 			_snprintf( buffer, Length, "%s", cursor );
+			cursor = buffer + strlen(buffer);
+			// Strip final folder separator
+			while ( cursor>buffer && *cursor == '\\' )
+				*cursor -- = '\0';
 			LocalFile = vsPrintf("%s\\%s.ocs", buffer, deviceid);
 			free(buffer);
 			Debug("Writing local inventory to %s", LocalFile);
@@ -359,10 +366,10 @@ static void InternetError(LPCSTR error)
 	}
 }
 
-static BOOLEAN SendToServer(LPSTR deviceid, LPGLPISERVER glpi)
+static BOOL SendToServer(LPSTR deviceid, LPGLPISERVER glpi)
 {
 	HINTERNET hOpen, hInet, hRequest;
-	BOOLEAN useSsl = FALSE, result = TRUE;
+	BOOL useSsl = FALSE, result = TRUE;
 	DWORD dwState = 0, dwFlags = 0 ;
 	LPSTR content = NULL;
 
@@ -587,7 +594,7 @@ static BOOLEAN SendToServer(LPSTR deviceid, LPGLPISERVER glpi)
 	return result;
 }
 
-void SendRemote(LPSTR deviceid)
+BOOL SendRemote(LPSTR deviceid)
 {
 	int Length = 0, count = 0;
 	LPSTR separator, cursor = conf.server;
@@ -640,4 +647,6 @@ void SendRemote(LPSTR deviceid)
 		Log("One inventory sent");
 	else
 		Log("No inventory sent to server");
+
+	return (count>0);
 }

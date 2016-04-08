@@ -39,12 +39,13 @@ read define major_string MAJOR <<<$( egrep '^#define MAJOR_VERSION' src/glpi-win
 read define minor_string MINOR <<<$( egrep '^#define MINOR_VERSION' src/glpi-wince-agent.h )
 
 # Update inf file
-sed -e "s/AgentVersion = .0\.0./AgentVersion = \"$MAJOR.$MINOR\"/" \
+sed -e "s/^AgentVersion = .*/AgentVersion = \"$MAJOR.$MINOR\"/" \
 	src/glpi-wince-agent.inf >glpi-wince-agent.inf
 
 if [ -x "$( which upx 2>/dev/null )" ]; then
 	upx --compress-icons=0 --best src/glpi-wince-agent.exe
 	upx  --best src/glpi-wince-agent-setup.dll
+	upx --best src/glpi-wince-agent-service.dll
 fi
 
 # Generate cab

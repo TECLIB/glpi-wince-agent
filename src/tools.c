@@ -21,11 +21,13 @@
  */
 
 #include <windows.h>
+#include <winbase.h>
 
 #include "glpi-wince-agent.h"
 
 #define MAX_VS_SIZE 256
 #define MAX_TS_SIZE 40
+#define MAX_WV_SIZE 16
 
 static DWORD dwStartTick = 0;
 static LPSTR sHostname = NULL;
@@ -46,7 +48,9 @@ void *allocate(ULONG size, LPCSTR reason )
 				Error("[%s] Can't allocate %lu bytes", reason, size);
 			else
 				Error("Can't allocate %lu bytes", size);
+#ifndef GWA
 			Abort();
+#endif
 		}
 #ifdef DEBUG
 		else
@@ -76,7 +80,9 @@ PFIXED_INFO getNetworkParams(void)
 		if ((Err != ERROR_BUFFER_OVERFLOW) && (Err != ERROR_INSUFFICIENT_BUFFER))
 		{
 			Error("GetNetworkParams() sizing failed with error %lu\n", Err);
+#ifndef GWA
 			Abort();
+#endif
 		}
 	}
 
@@ -87,7 +93,9 @@ PFIXED_INFO getNetworkParams(void)
 	// Retreive network params
 	if ((Err = GetNetworkParams(pFixedInfo, &FixedInfoSize)) != 0) {
 		Error("GetNetworkParams() failed with error code %lu\n", Err);
+#ifndef GWA
 		Abort();
+#endif
 	}
 
 	expiration = GetTickCount() - dwStartTick + EXPIRATION_DELAY;
@@ -154,6 +162,63 @@ LPSTR getTimestamp(void)
 	return timestamp;
 }
 
+static void addFileTimeMinutes( LPFILETIME lpFt, DWORD dwMinutes )
+{
+	ULARGE_INTEGER ft ;
+
+	ft.LowPart  = lpFt->dwLowDateTime;
+	ft.HighPart = lpFt->dwHighDateTime;
+
+	ft.LowPart += (ULONG)dwMinutes*600000;
+	if ( (ULONG)ft.LowPart < (ULONG)lpFt->dwLowDateTime )
+	{
+		ft.HighPart++;
+	}
+
+	lpFt->dwLowDateTime =  ft.LowPart;
+	lpFt->dwHighDateTime = ft.HighPart;
+}
+
+void computeNextRunDate(void)
+{
+#ifdef STDERR
+	stderrf("Current nextRunDate: 0x%08x:0x%08x",
+		nextRunDate.dwHighDateTime, nextRunDate.dwLowDateTime);
+#endif
+	// Initial delay
+	if (nextRunDate.dwLowDateTime == 0 && nextRunDate.dwHighDateTime == 0)
+	{
+		GetCurrentFT(&nextRunDate);
+		addFileTimeMinutes(&nextRunDate, DEFAULT_INITIAL_DELAY/2 +
+			Random()%(DEFAULT_INITIAL_DELAY/2));
+	}
+	else
+	{
+		addFileTimeMinutes(&nextRunDate, DEFAULT_MAX_DELAY/2 +
+			Random()%(DEFAULT_MAX_DELAY/2));
+	}
+#ifdef STDERR
+	stderrf("Computed nextRunDate: 0x%08x:0x%08x",
+		nextRunDate.dwHighDateTime, nextRunDate.dwLowDateTime);
+#endif
+}
+
+BOOL timeToSubmit(void)
+{
+	FILETIME now = { 0, 0 };
+#ifdef STDERR
+	stderrf("Getting current FT");
+#endif
+	GetCurrentFT(&now);
+#ifdef STDERR
+	stderrf("Comparing current FT to nextRunDate: 0x%08x:0x%08x vs 0x%08x:0x%08x",
+		nextRunDate.dwHighDateTime, nextRunDate.dwLowDateTime,
+		now.dwHighDateTime, now.dwLowDateTime
+	);
+#endif
+	return (CompareFileTime(&nextRunDate,&now) < 0);
+}
+
 LPSYSTEMTIME getLocalTime(void)
 {
 	static SYSTEMTIME __systemtime ;
@@ -163,7 +228,15 @@ LPSYSTEMTIME getLocalTime(void)
 
 void ToolsInit(void)
 {
-	dwStartTick = GetTickCount();
+	if (dwStartTick == 0)
+	{
+		dwStartTick = GetTickCount();
+	}
+
+	if (nextRunDate.dwLowDateTime == 0 && nextRunDate.dwHighDateTime == 0)
+	{
+		computeNextRunDate();
+	}
 }
 
 void ToolsQuit(void)
@@ -171,6 +244,57 @@ void ToolsQuit(void)
 	Debug2("Freeing Tools");
 	free(pFixedInfo);
 	free(sHostname);
+
+	pFixedInfo = NULL;
+	sHostname  = NULL;
+}
+
+LPSTR getRegPath( LPCSTR value )
+{
+	LPSTR path = NULL;
+
+#ifdef STDERR
+	stderrf("Looking for %s path in registry", value);
+#endif
+	if (value != NULL && strlen(value) > 0 && strlen(value)<MAX_WV_SIZE)
+	{
+		HKEY hKey = NULL;
+		if (OpenedKey(HKEY_LOCAL_MACHINE, L"\\Software\\"EDITOR"\\"APPNAME, &hKey))
+		{
+			WCHAR wValue[MAX_WV_SIZE];
+			DWORD dwType = REG_SZ, dwDataSize = 2*MAX_PATH;
+			LPBYTE lpData = allocate(dwDataSize, "getRegPath");
+			swprintf( wValue, L"%hs", value );
+			if (RegQueryValueEx(hKey, wValue, NULL, &dwType,
+								lpData, &dwDataSize) == ERROR_SUCCESS)
+			{
+				dwDataSize /= 2;
+				if (dwDataSize && dwDataSize<MAX_PATH)
+				{
+					path = allocate(dwDataSize, "RegPath");
+					memset( path, 0, dwDataSize );
+					wcstombs(path, (LPTSTR)lpData, dwDataSize);
+#ifdef STDERR
+					stderrf("Found %s=%s in reg, len=%d", value, path, dwDataSize);
+				}
+				else
+				{
+					stderrf("Failed to read %s path in registry (len=%d)", value, dwDataSize);
+#endif
+				}
+			}
+			free(lpData);
+			RegCloseKey(hKey);
+		}
+#ifdef STDERR
+		else
+		{
+			stderrf("Failed to read %s path in registry", value);
+		}
+#endif
+	}
+
+	return path;
 }
 
 LPSTR vsPrintf( LPCSTR fmt, ... ) {

@@ -21,6 +21,8 @@
  */
 
 #include <windows.h>
+#include <service.h>
+#include <winioctl.h>
 #include <libgen.h>
 
 #include "glpi-wince-agent.h"
@@ -28,6 +30,9 @@
 LPSTR FileName = NULL;
 LPSTR CurrentPath = NULL;
 LPSTR DeviceID = NULL;
+BOOL bInitialized = FALSE;
+DWORD maxDelay = DEFAULT_MAX_DELAY ;
+FILETIME nextRunDate = { 0, 0 };
 
 // local functions
 static LPSTR computeDeviceID(void);
@@ -42,7 +47,11 @@ void Init(void)
 	wFileName = allocate( 2*(MAX_PATH+1), "wFileName" );
 	if (!GetModuleFileNameW(NULL, wFileName, MAX_PATH))
 	{
+#ifdef GWA
+		fprintf(stderr, APPNAME ": Can't get own filename");
+#else
 		MessageBox( NULL, L"Can't get filename", L"Agent Init", MB_OK | MB_ICONINFORMATION );
+#endif
 	}
 	buflen = wcslen(wFileName) + 1;
 
@@ -54,7 +63,7 @@ void Init(void)
 	CurrentPath = dirname(CurrentPath);
 	free(wFileName);
 
-	LoggerInit(CurrentPath);
+	LoggerInit();
 
 	Log("%s started", AgentName);
 
@@ -72,6 +81,13 @@ void Init(void)
 	// Load config as StorageInit() has now initialized VarDir
 	conf = ConfigLoad(VarDir);
 
+	// Save returned default config if not loaded from config file
+	if (!conf.loaded)
+	{
+		Debug("Saving default config");
+		ConfigSave();
+	}
+
 	// Keep DeviceID consistent over the time loading previous state
 	DeviceID = loadState();
 
@@ -81,41 +97,170 @@ void Init(void)
 
 	// Keep DeviceID consistent over the time saving now current state
 	saveState(DeviceID);
+
+	bInitialized = TRUE;
 }
 
-void Run(void)
+void Start(void)
 {
-	Log( "Running..." );
-	RunInventory();
+	if (bInitialized)
+		Quit();
+	Init();
+}
 
-	TargetInit(DeviceID);
-
-	Log( "Submitting..." );
+#ifdef GWA
+void Run(BOOL force)
+{
 	// Write local inventory if desired
 	if (conf.local != NULL)
+	{
+		Log( "Running inventory..." );
+		RunInventory();
+
+		TargetInit(DeviceID);
+
+		Log( "Saving to file as local target..." );
 		WriteLocal(DeviceID);
+	}
 
 	// Send inventory if desired
 	if (conf.server != NULL)
-		SendRemote(DeviceID);
+	{
+		// While not forced, check if it's time to submit
+		if (force || timeToSubmit())
+		{
+			Log( "Submitting to remote target..." );
+
+			if (getInventory() == NULL)
+			{
+				Log( "Running inventory..." );
+				RunInventory();
+
+				TargetInit(DeviceID);
+			}
+
+			if (SendRemote(DeviceID))
+			{
+				computeNextRunDate();
+			}
+		}
+	}
+
+	TargetQuit();
+	FreeInventory();
 
 	Log( "Run finished" );
+}
+#else
+void RequestRun(void)
+{
+	HANDLE hService = NULL;
+
+	Log( "Requesting inventory..." );
+
+	Log( "Trying to access the service...");
+	hService = CreateFile(L"GWA0:",GENERIC_READ|GENERIC_WRITE,0,NULL,OPEN_EXISTING,0,NULL);
+	if (hService != INVALID_HANDLE_VALUE)
+	{
+		LPCSTR cmd = "RUN";
+		DWORD written = 0;
+		if (WriteFile(hService, cmd, strlen(cmd), &written, NULL))
+		{
+			if (written == strlen(cmd))
+			{
+				Log("Request transmitted");
+			}
+			else
+			{
+				Error("Failed to fully transmit request");
+			}
+		}
+		else
+		{
+			Error("Failed to transmit request");
+		}
+		CloseHandle(hService);
+	}
+	else if (GetLastError() == ERROR_DEV_NOT_EXIST)
+	{
+		Error(APPNAME " service disabled");
+	}
+	else
+	{
+		Error("Failed to access " APPNAME " service");
+	}
+}
+#endif
+
+void Stop(void)
+{
+	Quit();
+}
+
+void Refresh(void)
+{
+#ifdef GWA
+	ConfigQuit();
+	conf = ConfigLoad(VarDir);
+#else
+	HANDLE hService = NULL;
+
+	Log( "Requesting config refresh..." );
+
+	Log( "Trying to access the service...");
+	hService = CreateFile(L"GWA0:",GENERIC_READ|GENERIC_WRITE,0,NULL,OPEN_EXISTING,0,NULL);
+	if (hService != INVALID_HANDLE_VALUE)
+	{
+		DWORD IoControl = IOCTL_SERVICE_REFRESH;
+		DWORD returned = 0;
+		if (DeviceIoControl(hService, IoControl, NULL, 0, NULL, 0, &returned, NULL))
+		{
+			Log("Config refresh requested");
+		}
+		else
+		{
+			Error("Failed to transmit refresh request");
+		}
+		CloseHandle(hService);
+	}
+	else if (GetLastError() == ERROR_DEV_NOT_EXIST)
+	{
+		Error(APPNAME " service disabled");
+	}
+	else
+	{
+		Error("Failed to access " APPNAME " service");
+	}
+#endif
 }
 
 void Quit(void)
 {
-	FreeInventory();
+#ifdef TEST
+	Log( "Quitting..." );
+#endif
+	ConfigQuit();
+	StorageQuit();
+	ToolsQuit();
+	LoggerQuit();
+
+#ifdef STDERR
+	stderrf("All QUIT() API called");
+#endif
 
 	free(FileName);
 	free(CurrentPath);
 	free(DeviceID);
 
-	Log( "Quitting..." );
-	TargetQuit();
-	ConfigQuit();
-	StorageQuit();
-	ToolsQuit();
-	LoggerQuit();
+	FileName = NULL;
+	CurrentPath = NULL;
+	DeviceID = NULL;
+
+#ifdef STDERR
+	stderrf("Ressources freed");
+#endif
+
+	bInitialized = FALSE;
 }
 
 static LPSTR computeDeviceID(void)
@@ -140,7 +285,9 @@ static LPSTR computeDeviceID(void)
 			lpSystemTime->wSecond) > buflen)
 	{
 		Error("Bad computed DeviceID");
+#ifndef GWA
 		Abort();
+#endif
 	}
 
 	Debug2("Computed DeviceID=%s", DeviceID);
@@ -151,4 +298,52 @@ static LPSTR computeDeviceID(void)
 LPSTR getCurrentPath(void)
 {
 	return CurrentPath;
+}
+
+void RunDebugInventory(void)
+{
+#ifdef GWA
+#ifdef TEST
+	Log( "Running inventory..." );
+	RunInventory();
+
+	DebugInventory();
+#endif
+#else
+	HANDLE hService = NULL;
+
+	Log( "Requesting debug inventory..." );
+
+	Log( "Trying to access the service...");
+	hService = CreateFile(L"GWA0:",GENERIC_READ|GENERIC_WRITE,0,NULL,OPEN_EXISTING,0,NULL);
+	if (hService != INVALID_HANDLE_VALUE)
+	{
+		LPCSTR cmd = "DEBUGRUN";
+		DWORD written = 0;
+		if (WriteFile(hService, cmd, strlen(cmd), &written, NULL))
+		{
+			if (written == strlen(cmd))
+			{
+				Log("Request transmitted");
+			}
+			else
+			{
+				Error("Failed to fully transmit request");
+			}
+		}
+		else
+		{
+			Error("Failed to transmit request");
+		}
+		CloseHandle(hService);
+	}
+	else if (GetLastError() == ERROR_DEV_NOT_EXIST)
+	{
+		Error(APPNAME " service disabled");
+	}
+	else
+	{
+		Error("Failed to access " APPNAME " service");
+	}
+#endif
 }

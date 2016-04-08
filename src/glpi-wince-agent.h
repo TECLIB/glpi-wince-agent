@@ -1,11 +1,25 @@
 
+#define EDITOR  "Teclib"
+#define APPNAME "GLPI-Agent"
+
 #define MAJOR_VERSION	1
 #define MINOR_VERSION	0
+
+#define DEFAULTVARDIR      "var"
+#define DEFAULTINSTALLPATH "\\Program Files\\" APPNAME
+#define JOURNALBASENAME    "service.txt"
+#define INTERFACEBASENAME  "client.txt"
+
+#ifdef STDERR
+#define STDERRFILE         "\\stderr.txt"
+#endif
 
 #define STRING(s)			#s
 #define XSTRING(s)			STRING(s)
 
 #define VERSION				XSTRING(MAJOR_VERSION.MINOR_VERSION)
+#define WEDITOR				L""EDITOR
+#define WAPPNAME			L""APPNAME
 
 #define IDR_MAINICON			101
 #define IDR_MAINMENU			102
@@ -13,8 +27,7 @@
 
 #define IDM_MENU_EXIT			201
 #define IDM_MENU_RUN			202
-#define IDM_MENU_DOINVENTORY	203
-#define IDM_MENU_SAVECONFIG		204
+#define IDM_MENU_SAVECONFIG		203
 
 #ifdef DEBUG
 #define IDM_MENU_DEBUGINVENTORY	901
@@ -30,6 +43,10 @@
 // Define expiration delay to 10 minutes related to GetTickCount() API
 #define EXPIRATION_DELAY  (DWORD)600000
 
+// Define target initial and max delay as minutes
+#define DEFAULT_MAX_DELAY        4*60
+#define DEFAULT_INITIAL_DELAY    10
+
 #define GLPI_CONNECT_TIMEOUT	5000
 
 #include <iphlpapi.h>
@@ -40,14 +57,25 @@
 #define lpstrcmp(x,y) \
 	((x == NULL && y == NULL)||(x != NULL && y != NULL && !strcmp(x,y)))
 
+#define OpenedKey(x,y,z) RegOpenKeyEx(x,y,0,0,z)==ERROR_SUCCESS
+
 /*
  * agent.c
  */
+DWORD maxDelay;
+FILETIME nextRunDate;
 void Init(void);
-void Run(void);
+void Start(void);
+void Stop(void);
+void Refresh(void);
+#ifdef GWA
+void Run(BOOL force);
+#else
+void RequestRun(void);
+#endif
 void Quit(void);
 LPSTR getCurrentPath(void);
-LPSTR getDeviceID(void);
+void RunDebugInventory(void);
 
 /*
  * config.c
@@ -57,7 +85,7 @@ typedef struct {
 	LPSTR local;		// local path
 	LPSTR tag;			// client tag
 	int debug;			// debug level
-	BOOLEAN loaded;		// flag telling config has been loaded
+	BOOL  loaded;		// flag telling config has been loaded
 } CONFIG;
 
 CONFIG conf;
@@ -78,7 +106,9 @@ LPCSTR DefaultVarDir;
 /*
  * glpi-wince-agent.c
  */
+#ifndef GWA
 void Abort(void);
+#endif
 
 /*
  * inventory.c
@@ -102,10 +132,8 @@ LIST *createList(LPCSTR key);
 void addField(ENTRY *node, LPCSTR key, LPSTR what);
 void FreeEntry(ENTRY *entry);
 
-#ifdef DEBUG
 void DebugInventory(void);
 void DebugEntry(ENTRY *entry, LPCSTR parent);
-#endif
 
 /*
  * inventory/board.c
@@ -127,7 +155,7 @@ void getNetworks(void);
 /*
  * logger.c
  */
-void LoggerInit(LPCSTR path);
+void LoggerInit(void);
 void LoggerQuit(void);
 void Log(LPCSTR format, ...);
 void Error(LPCSTR format, ...);
@@ -135,6 +163,10 @@ void Debug(LPCSTR format, ...);
 void Debug2(LPCSTR format, ...);
 void DebugError(LPCSTR format, ...);
 void RawDebug(LPCSTR format, LPBYTE buffer, ULONG size);
+#ifdef STDERR
+FILE *hStdErr;
+void stderrf(LPCSTR format, ...);
+#endif
 
 /*
  * storage.c
@@ -151,7 +183,7 @@ void saveState(LPSTR deviceid);
 void TargetInit(LPSTR deviceid);
 void TargetQuit(void);
 void WriteLocal(LPSTR deviceid);
-void SendRemote(LPSTR deviceid);
+BOOL SendRemote(LPSTR deviceid);
 
 /*
  * tools.c
@@ -162,6 +194,9 @@ void ToolsQuit(void);
 PFIXED_INFO getNetworkParams(void);
 LPSTR getHostname(void);
 LPSTR getTimestamp(void);
+void computeNextRunDate(void);
+BOOL timeToSubmit(void);
 LPSYSTEMTIME getLocalTime(void);
+LPSTR getRegPath( LPCSTR value );
 LPSTR vsPrintf( LPCSTR fmt, ... );
 LPSTR hexstring(BYTE *addr, int addrlen);

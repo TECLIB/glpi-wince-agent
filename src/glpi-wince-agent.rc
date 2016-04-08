@@ -22,7 +22,9 @@ BEGIN
 	BEGIN
 		MENUITEM	"&Save configuration",	IDM_MENU_SAVECONFIG
 		MENUITEM	SEPARATOR
+#ifdef TEST
 		MENUITEM	"Do &Inventory",		IDM_MENU_DOINVENTORY
+#endif
 #ifdef DEBUG
 		MENUITEM	"&Debug inventory",		IDM_MENU_DEBUGINVENTORY
 #endif

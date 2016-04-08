@@ -195,7 +195,7 @@ static void getTag(void)
 	InventoryAdd( "ACCOUNTINFO", AccountInfo );
 }
 
-#ifdef DEBUG
+#ifdef TEST
 void DebugEntry(ENTRY *entry, LPCSTR parent)
 {
 	int buflen = 16; // Be large
@@ -243,4 +243,5 @@ void FreeEntry(ENTRY *entry)
 void FreeInventory(void)
 {
 	FreeEntry(Inventory);
+	Inventory = NULL;
 }

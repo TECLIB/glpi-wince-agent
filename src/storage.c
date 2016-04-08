@@ -21,52 +21,81 @@
  */
 
 #include <windows.h>
+#ifndef GWA
 #include <shlobj.h>
+#endif
 
 #include "glpi-wince-agent.h"
 
 LPSTR VarDir = NULL;
-LPSTR StorageFile = NULL;
 
 void StorageInit(LPCSTR path)
 {
-	LPTSTR lpszPath = NULL;
-
-	lpszPath = allocate(2*(MAX_PATH+1), "APPDATA path");
-	if (SHGetSpecialFolderPath( NULL, lpszPath, CSIDL_APPDATA, 0))
+	if (VarDir == NULL)
 	{
-		int len = wcslen(lpszPath);
-		VarDir = allocate(len+strlen(AppName)+2, "VarDir");
-		wcstombs(VarDir, lpszPath, len);
-		Debug2("Appdata path: %s", VarDir);
-		strcat( VarDir, "\\" );
-		strcat( VarDir, AppName );
-	} else {
-		Log("Can't get APPDATA path");
-		VarDir = allocate(strlen(path)+strlen(DefaultVarDir)+2, "VarDir");
-		sprintf( VarDir, "%s\\%s", path, DefaultVarDir );
+		VarDir = getRegPath( "VarDir" );
+#ifdef STDERR
+		stderrf( "VarDir='%s'", VarDir );
+#endif
 	}
 
-	Log("Storage path: %s", VarDir);
-
-	swprintf( lpszPath, L"%hs", VarDir );
-	if (!CreateDirectory( lpszPath, NULL ))
+#ifndef GWA
+	if (VarDir == NULL)
 	{
-		if (GetLastError() != ERROR_FILE_EXISTS)
-			DebugError("Failed to create %s folder", VarDir);
-	}
+		LPTSTR lpszPath = allocate(2*(MAX_PATH+1), "APPDATA path");
+		if (SHGetSpecialFolderPath( NULL, lpszPath, CSIDL_APPDATA, 0))
+		{
+			int len = wcslen(lpszPath);
+			VarDir = allocate(len+strlen(AppName)+2, "VarDir");
+			wcstombs(VarDir, lpszPath, len);
+			Debug2("Appdata path: %s", VarDir);
+			strcat( VarDir, "\\" );
+			strcat( VarDir, AppName );
+		} else {
+			Log("Can't get APPDATA path");
+			VarDir = allocate(strlen(path)+strlen(DefaultVarDir)+2, "VarDir");
+			sprintf( VarDir, "%s\\%s", path, DefaultVarDir );
+		}
 
-	free(lpszPath);
+		Log("Storage path: %s", VarDir);
+
+		swprintf( lpszPath, L"%hs", VarDir );
+		if (!CreateDirectory( lpszPath, NULL ))
+		{
+			if (GetLastError() != ERROR_FILE_EXISTS)
+				DebugError("Failed to create %s folder", VarDir);
+		}
+
+		free(lpszPath);
+	}
+#endif
 }
 
-static void _setFilePath(void)
+static LPCSTR _getStorageFilename(void)
 {
-	int buflen = 7;
-	if (StorageFile != NULL)
-		return;
-	buflen += strlen(VarDir) + strlen(AppName);
-	StorageFile = allocate(buflen, "StorareFile");
-	sprintf( StorageFile, "%s\\%s.dump", VarDir, AppName );
+	static char filename[MAX_PATH];
+
+#ifdef GWA
+	if (VarDir == NULL)
+	{
+		StorageInit(NULL);
+	}
+#endif
+
+	if (VarDir != NULL)
+	{
+		sprintf( filename, "%s\\%s.dump", VarDir, AppName );
+	}
+	else
+	{
+		sprintf( filename, "\\%s.dump", AppName );
+	}
+
+#ifdef STDERR
+	stderrf( "_getStorageFilename(): %s", filename );
+#endif
+
+	return filename;
 }
 
 #define STORAGE_MAGIC_TYPE DWORD
@@ -80,7 +109,11 @@ LPSTR loadState(void)
 	LPSTR stateContent = NULL;
 	LPSTR deviceid = NULL;
 
-	_setFilePath();
+	LPCSTR StorageFile = _getStorageFilename();
+
+#ifdef STDERR
+	stderrf( "StorageFile='%s'", StorageFile );
+#endif
 
 	hStorage = fopen( StorageFile, "r" );
 	if( hStorage == NULL )
@@ -151,6 +184,19 @@ LPSTR loadState(void)
 		{
 			Error("Last magic bytes do not match in state file");
 		}
+
+		// Read maxDelay
+		if (fread( &maxDelay, sizeof(maxDelay), 1, hStorage ) != 1)
+		{
+			Error("Can't read maxDelay from state file");
+		}
+
+		// Read nextRunDate
+		if (fread( &nextRunDate, sizeof(nextRunDate), 1, hStorage ) != 1)
+		{
+			Error("Can't read nextRunDate from state file");
+		}
+
 		fclose(hStorage);
 	}
 
@@ -163,7 +209,11 @@ void saveState(LPSTR deviceid)
 	STORAGE_MAGIC_TYPE magic = STORAGE_FILE_MAGIC;
 	DWORD size = 0;
 
-	_setFilePath();
+	LPCSTR StorageFile = _getStorageFilename();
+
+#ifdef STDERR
+	stderrf( "StorageFile='%s'", StorageFile );
+#endif
 
 	hStorage = fopen( StorageFile, "w" );
 	if( hStorage == NULL )
@@ -200,6 +250,7 @@ void saveState(LPSTR deviceid)
 			return;
 		}
 
+		// Insert RAW deviceid after putting one DWORD for its size
 		size = strlen(deviceid);
 		if (fwrite( &size, sizeof(DWORD), 1, hStorage ) != 1)
 		{
@@ -219,6 +270,20 @@ void saveState(LPSTR deviceid)
 			Error("Can't write last magic bytes in state file");
 		}
 
+		// Insert maxDelay & nextRunDate
+		if (fwrite( &maxDelay, sizeof(maxDelay), 1, hStorage ) != 1)
+		{
+			Error("Can't write maxDelay in state file");
+			fclose(hStorage);
+			return;
+		}
+		if (fwrite( &nextRunDate, sizeof(nextRunDate), 1, hStorage ) != 1)
+		{
+			Error("Can't write nextRunDate in state file");
+			fclose(hStorage);
+			return;
+		}
+
 		fclose(hStorage);
 	}
 }
@@ -227,5 +292,6 @@ void StorageQuit(void)
 {
 	Debug2("Freeing Storage");
 	free(VarDir);
-	free(StorageFile);
+
+	VarDir = NULL;
 }
