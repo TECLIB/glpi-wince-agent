@@ -33,14 +33,8 @@ cabtest:
 	@tools/makecab-release.sh --test
 
 release:
-	@$(MAKE) clean debug
-	@mv -vf src/glpi-wince-agent.exe glpi-wince-agent-debug.exe
-	@$(MAKE) clean setup all
-	@cp -avf src/glpi-wince-agent.exe glpi-wince-agent.exe
-	@tools/makecab-release.sh
-	@$(MAKE) clean setup test
-	@cp -avf src/glpi-wince-agent.exe glpi-wince-agent-test.exe
-	@tools/makecab-release.sh --test
+	@$(MAKE) cab
+	@$(MAKE) cabtest
 
 glpi-wince-agent.tar.gz: README.md Makefile src/*.{c,h,rc}
 
