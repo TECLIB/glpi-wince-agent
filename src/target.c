@@ -328,15 +328,16 @@ static LPGLPISERVER DecodeGlpiUrl(LPCSTR url)
 
 static void FreeGlpiUrl(LPGLPISERVER glpi)
 {
-	if (glpi == NULL)
-		return;
-	// Free previously allocated memory
-	free(glpi->url);
-	free(glpi->server);
-	free(glpi->username);
-	free(glpi->password);
-	free(glpi->urlpath);
-	free(glpi);
+	if (glpi != NULL)
+	{
+		// Free previously allocated memory
+		free(glpi->url);
+		free(glpi->server);
+		free(glpi->username);
+		free(glpi->password);
+		free(glpi->urlpath);
+		free(glpi);
+	}
 }
 
 static void InternetError(LPCSTR error)
