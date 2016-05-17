@@ -131,6 +131,7 @@ void Run(BOOL force)
 		{
 			Log( "Submitting to remote target..." );
 
+			// Only run inventory if still not done, as local inventory
 			if (getInventory() == NULL)
 			{
 				Log( "Running inventory..." );
