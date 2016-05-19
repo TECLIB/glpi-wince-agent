@@ -135,14 +135,10 @@ void LoggerInit(void)
 		if( hLogger == NULL )
 		{
 			Error( "Can't reopen stdout toward file" );
-#ifdef GWA
-			if (getSystemError(FREEBUFFER) != NULL)
-			{
-				fprintf( stderr, "Error reopening stdout: %s\n", lpErrorBuf);
-#else
 			if (getSystemError(KEEPBUFFER) != NULL)
 			{
-				fprintf( stdout, "Error reopening stdout: %s\n", lpErrorBuf);
+				fprintf( stdout, APPNAME": Error reopening stdout: %s\n", lpErrorBuf);
+#ifndef GWA
 				if (lpMsgBuf != NULL)
 				{
 					MessageBox( NULL, (LPCTSTR)lpMsgBuf, L"LoggerInit", MB_OK | MB_ICONINFORMATION );
@@ -204,7 +200,9 @@ void Log(LPCSTR format, ...)
 
 	if (!bLoggerInit)
 	{
+#ifndef GWA
 		vfprintf(stderr, format, args);
+#endif
 	}
 	else
 	{
@@ -218,8 +216,10 @@ void Log(LPCSTR format, ...)
 				fprintf( stdout, "%sError with '%s' format, %s\n", getTimestamp(), format, lpErrorBuf);
 			else
 				fprintf( stdout, "%sError with '%s' format\n", getTimestamp(), format);
+#ifndef GWA
 			fprintf( stderr, "Log Buffer overflow\n" );
 			exit(EXIT_FAILURE);
+#endif
 		}
 	}
 
@@ -244,7 +244,9 @@ void Error(LPCSTR format, ...)
 
 	if (!bLoggerInit)
 	{
+#ifndef GWA
 		vfprintf(stderr, format, args);
+#endif
 	}
 	else
 	{
@@ -253,12 +255,14 @@ void Error(LPCSTR format, ...)
 		if (size && size<1024)
 		{
 			fprintf( stdout, "%sError : %s\n", getTimestamp(), lpLogBuffer );
+#ifndef GWA
 			fprintf( stderr, "Error : %s\n", lpLogBuffer );
+#endif
 			if (getSystemError(FREEBUFFER) != NULL)
 				fprintf( stdout, "Last system error: %s\n", lpErrorBuf);
-	#ifdef DEBUG
+#ifdef DEBUG
 			Debug2("Errno: %d", GetLastError());
-	#endif
+#endif
 		}
 		else
 		{
@@ -266,8 +270,10 @@ void Error(LPCSTR format, ...)
 				fprintf( stdout, "%sError with '%s' format, %s\n", getTimestamp(), format, lpErrorBuf);
 			else
 				fprintf( stdout, "%sError with '%s' format\n", getTimestamp(), format);
+#ifndef GWA
 			fprintf( stderr, "Error Buffer overflow\n" );
 			exit(EXIT_FAILURE);
+#endif
 		}
 	}
 
@@ -297,11 +303,13 @@ void Debug(LPCSTR format, ...)
 
 	if (size && size<1024)
 		fprintf( stdout, "%sDebug : %s\n", getTimestamp(), (LPSTR)lpLogBuffer );
+#ifndef GWA
 	else
 	{
 		fprintf( stderr, "Debug Buffer overflow\n" );
 		exit(EXIT_FAILURE);
 	}
+#endif
 
 	va_end(args);
 }
@@ -327,11 +335,13 @@ void Debug2(LPCSTR format, ...)
 
 	if (size && size<1024)
 		fprintf( stdout, "%sDebug2: %s\n", getTimestamp(), (LPSTR)lpLogBuffer );
+#ifndef GWA
 	else
 	{
 		fprintf( stderr, "Debug2 Buffer overflow\n" );
 		exit(EXIT_FAILURE);
 	}
+#endif
 
 	va_end(args);
 }
@@ -361,11 +371,13 @@ void DebugError(LPCSTR format, ...)
 		if (getSystemError(FREEBUFFER) != NULL)
 			fprintf( stdout, "%sDebugE: System error: %s\n", getTimestamp(), lpErrorBuf);
 	}
+#ifndef GWA
 	else
 	{
 		fprintf( stderr, "DebugE Buffer overflow\n" );
 		exit(EXIT_FAILURE);
 	}
+#endif
 
 	SetLastError(NO_ERROR);
 
