@@ -405,8 +405,8 @@ static BOOL SendToServer(LPSTR deviceid, LPGLPISERVER glpi)
 	}
 	else
 	{
-		Error("No internet connection available on device");
-		return FALSE;
+		Error("No internet connection seems available on device");
+		//return FALSE;
 	}
 
 	// Check internet connection connectivity
