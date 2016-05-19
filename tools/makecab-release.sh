@@ -49,6 +49,7 @@ sed -e "s/^AgentVersion = .*/AgentVersion = \"$MAJOR.$MINOR\"/" \
 
 if [ "$UPX" -ne 0 -a -x "$( which upx 2>/dev/null )" ]; then
 	upx --compress-icons=0 --best src/glpi-wince-agent.exe
+	#upx --compress-icons=0 --best src/glpi-wince-agent-cpl.dll
 	upx --best src/glpi-wince-agent-setup.dll
 	upx --best src/glpi-wince-agent-service.dll
 fi

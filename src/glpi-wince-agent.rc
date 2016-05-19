@@ -10,7 +10,7 @@
 
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
-IDR_MAINICON		ICON	DISCARDABLE	"glpi-wince-agent.ico"
+IDR_MAINICON	ICON	DISCARDABLE	"glpi-wince-agent.ico"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -77,7 +77,7 @@ BEGIN
 			VALUE "FileVersion", VERSION "\0"
 			VALUE "InternalName", "GLPI-Agent\0"
 			VALUE "LegalCopyright", "Copyright (C) 2016, Teclib\0"
-			VALUE "OriginalFilename", "glpi-wince-agent.exe\0"
+			VALUE "OriginalFilename", "glpi-agent.exe\0"
 			VALUE "PrivateBuild", "Teclib arm-mingw32ce-gcc build\0"
 			VALUE "ProductName", "GLPI Agent\0"
 			VALUE "ProductVersion", VERSION "\0"

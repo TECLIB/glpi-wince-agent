@@ -469,7 +469,7 @@ static BOOL SendToServer(LPSTR deviceid, LPGLPISERVER glpi)
 	 * Set connection time-out to 1 second
 	 */
 	dwOptions = INTERNET_OPTION_CONNECT_TIMEOUT ;
-	ulOption  = 1000 ;
+	ulOption  = GLPI_CONNECT_TIMEOUT ;
 	if (InternetSetOption(hOpen, dwOptions, (LPVOID)&ulOption, sizeof(ulOption)))
 	{
 		Debug("Internet connection time-out set to %ulms", ulOption);

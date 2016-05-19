@@ -2,8 +2,8 @@
 #define EDITOR  "Teclib"
 #define APPNAME "GLPI-Agent"
 
-#define MAJOR_VERSION	1
-#define MINOR_VERSION	1
+#define MAJOR_VERSION      1
+#define MINOR_VERSION      1
 
 #define DEFAULTVARDIR      "var"
 #define DEFAULTINSTALLPATH "\\Program Files\\" APPNAME
@@ -21,13 +21,20 @@
 #define WEDITOR				L"Teclib"
 #define WAPPNAME			L"GLPI-Agent"
 
+/*
+ * Resources IDs
+ */
 #define IDR_MAINICON			101
 #define IDR_MAINMENU			102
 #define IDR_MAINDIALOG			103
+#define IDR_CPLDIALOG			104
 
 #define IDM_MENU_EXIT			201
 #define IDM_MENU_RUN			202
 #define IDM_MENU_SAVECONFIG		203
+
+#define IDS_APP_TITLE			501
+#define IDS_DESCRIPTION			502
 
 #ifdef DEBUG
 #define IDM_MENU_DEBUGINVENTORY	901
@@ -47,7 +54,8 @@
 #define DEFAULT_MAX_DELAY        4*60
 #define DEFAULT_INITIAL_DELAY    10
 
-#define GLPI_CONNECT_TIMEOUT	5000
+// Define GLPI connection timeout in milliseconds
+#define GLPI_CONNECT_TIMEOUT     1000
 
 #include <iphlpapi.h>
 

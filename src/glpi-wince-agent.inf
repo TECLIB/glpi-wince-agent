@@ -9,7 +9,7 @@ AppName = "GLPI-Agent"
 InstallDir = "%CE1%\%AppName%"
 
 [Strings]
-LinkFilename = "GLPI-Agent"
+LinkFilename = "GLPI Agent"
 AgentVersion = "__VERSION__"
 
 [CEDevice]
@@ -24,11 +24,12 @@ BuildMax = 0xE0000000
 
 [SourceDisksFiles]
 glpi-wince-agent.exe = 1
-glpi-wince-agent-setup.dll = 1
+;glpi-wince-agent-cpl.dll = 1
 glpi-wince-agent-service.dll = 1
+glpi-wince-agent-setup.dll = 1
 
 [DefaultInstall]
-CopyFiles = AgentFile,AgentService
+CopyFiles = AgentFile,AgentService ;,CplAgentFile
 CEShortcuts = Links
 AddReg = AddRegistry
 CESetupDLL=glpi-wince-agent-setup.dll
@@ -38,7 +39,11 @@ CESetupDLL=glpi-wince-agent-setup.dll
 ; Or http://www.cabextract.org.uk/wince_cab_format/
 AgentService = 0, %CE2% ; \Windows
 AgentFile = 0, %InstallDir%
+;CplAgentFile = 0, %CE2% ; \Windows
 Links = 0, %CE11% ; "\Windows\Start Menu" directory
+
+;[CplAgentFile]
+;glpi-wince-agent-cpl.dll,glpi-agent.cpl,,0x00000002
 
 [AgentFile]
 glpi-wince-agent.exe,glpi-agent.exe,,0x00000002
@@ -53,4 +58,4 @@ HKLM,\Software\Teclib\GLPI-Agent,KeepFiles,0x00010001,0
 
 [Links]
 ; shortcut to a file, created in the standard destination path %CE11% (/Windows/Start Menu/)
-%LinkFilename%,0,"glpi-agent.exe",%CE11%
+%LinkFilename%,0,"glpi-wince-agent.exe",%CE11%
