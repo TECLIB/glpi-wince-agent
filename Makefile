@@ -31,14 +31,16 @@ setup:
 service:
 	@$(MAKE) -w -C src glpi-wince-agent-service.dll
 
-cab: clean all
+cab:
+	@$(MAKE) clean all
 ifdef USE_UPX
 	@tools/makecab-release.sh --upx
 else
 	@tools/makecab-release.sh
 endif
 
-cabtest: clean test
+cabtest:
+	@$(MAKE) clean test
 ifdef USE_UPX
 	@tools/makecab-release.sh --upx --test
 else
