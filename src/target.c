@@ -371,8 +371,9 @@ static BOOL SendToServer(LPSTR deviceid, LPGLPISERVER glpi)
 {
 	HINTERNET hOpen, hInet, hRequest;
 	BOOL useSsl = FALSE, result = TRUE;
-	DWORD dwState = 0, dwFlags = 0 ;
+	DWORD dwState = 0, dwFlags = 0, dwOptions = 0 ;
 	LPSTR content = NULL;
+	ULONG ulOption = 0;
 
 	// Default flag for submission
 	dwFlags |= INTERNET_FLAG_NO_CACHE_WRITE ;
@@ -461,6 +462,19 @@ static BOOL SendToServer(LPSTR deviceid, LPGLPISERVER glpi)
 	{
 		Debug("Internet opened");
 		Debug2("User-Agent set to '%s'", UserAgent);
+	}
+
+	// Set Internet options
+	/*
+	 * Set connection time-out to 1 second
+	 */
+	dwOptions = INTERNET_OPTION_CONNECT_TIMEOUT ;
+	ulOption  = 1000 ;
+	if (InternetSetOption(hOpen, dwOptions, (LPVOID)&ulOption, sizeof(ulOption)))
+	{
+		Debug("Internet connection time-out set to %ulms", ulOption);
+	} else {
+		Error("Can't set internet connection time-out set to %ulms", ulOption);
 	}
 
 	// Get internet session
