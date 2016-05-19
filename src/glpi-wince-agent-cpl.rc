@@ -1,0 +1,23 @@
+//
+// Include
+//
+#include <windows.h>
+#include "glpi-wince-agent.h"
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDR_MAINICON	ICON	DISCARDABLE	"glpi-wince-agent.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Strings
+//
+STRINGTABLE
+BEGIN
+	IDS_APP_TITLE	L"GLPI Agent"
+	IDS_DESCRIPTION	L"GLPI Agent v" VERSION " Control Panel"
+END
