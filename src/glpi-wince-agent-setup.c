@@ -51,9 +51,16 @@ DECLSPEC_EXPORT APIENTRY BOOL
 DllMain(HANDLE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved);
 
 FILE *hFile = NULL;
+LPCSTR cstrInstallJournal = "\\Windows\\" APPNAME "-install.txt";
 DWORD keepFiles = 0;
 
 #define SHORT_BUFFER_SIZE 16
+
+// We need to adapt installation against WinCE Version
+OSVERSIONINFO os = {
+	sizeof(OSVERSIONINFO),
+	5, 0, 0, 0, L"\0"
+};
 
 /**
  * Logging functions
@@ -120,7 +127,6 @@ void StopAndDisableService(LPCSTR version)
 
 	Log("Looking to stop and disable service...");
 
-	//hService = CreateFile(L"GWA0:",GENERIC_READ|GENERIC_WRITE,0,NULL,OPEN_EXISTING,0,NULL);
 	hService = GetServiceHandle(L"GWA0:", NULL, &dwDllBuf);
 
 	if (hService != INVALID_HANDLE_VALUE)
@@ -225,6 +231,28 @@ void DumpRegKey(HKEY hKey, LPWSTR wKey)
 	}
 	free(wValueName);
 }
+
+void DebugRegistry(void)
+{
+	HKEY hKey = NULL;
+
+	// Dump Services keys
+	if (OpenedKey(HKEY_LOCAL_MACHINE, L"\\Services", &hKey))
+	{
+		Log("Dumping HKEY_LOCAL_MACHINE\\Services...");
+		DumpRegKey(hKey, L"\\Services");
+		RegCloseKey(hKey);
+		Log("Dump finished");
+	}
+	// Dump Softwares keys
+	if (OpenedKey(HKEY_LOCAL_MACHINE, L"\\Software", &hKey))
+	{
+		Log("Dumping HKEY_LOCAL_MACHINE\\Software...");
+		DumpRegKey(hKey, L"\\Software");
+		RegCloseKey(hKey);
+		Log("Dump finished");
+	}
+}
 #endif
 
 /**
@@ -237,32 +265,27 @@ Install_Init(HWND hwndparent, BOOL bFirstcall, BOOL IsInstalled,
 {
 	HKEY hKey = NULL;
 
+	// Initializes OS informations
+	os.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
+	if (!GetVersionEx( &os ))
+	{
+		Log("Failed to get system version");
+		// Must not happen, but just default to wince 5 while failing
+		os.dwMajorVersion = 5;
+	}
+
 	if (bFirstcall)
 	{
 		// Truncate installation log from here
 		if (hFile != NULL)
 		{
 			fclose(hFile);
-			hFile = freopen( "\\Windows\\" APPNAME "-install.txt", "w", stdout );
+			hFile = freopen( cstrInstallJournal, "w", stdout );
 		}
 
 #ifdef TEST
-		// Dump Services keys
-		if (OpenedKey(HKEY_LOCAL_MACHINE, L"\\Services", &hKey))
-		{
-			Log("Dumping HKEY_LOCAL_MACHINE\\Services:");
-			DumpRegKey(hKey, L"\\Services");
-			RegCloseKey(hKey);
-			Log("Dump finished");
-		}
-		// Dump Softwares keys
-		if (OpenedKey(HKEY_LOCAL_MACHINE, L"\\Software", &hKey))
-		{
-			Log("Dumping HKEY_LOCAL_MACHINE\\Software:");
-			DumpRegKey(hKey, L"\\Software");
-			RegCloseKey(hKey);
-			Log("Dump finished");
-		}
+		Log("Dumping registry before service installation...");
+		DebugRegistry();
 #endif
 	}
 
@@ -335,26 +358,7 @@ Install_Exit(HWND hwndparent, LPCTSTR pszinstalldir, WORD cfaileddirs,
 	LPTSTR wPath = NULL;
 	LPSTR path = NULL;
 	HANDLE hService = NULL;
-	HKEY hKey = NULL;
-
-#ifdef TEST
-	// Dump Services keys
-	if (OpenedKey(HKEY_LOCAL_MACHINE, L"\\Services", &hKey))
-	{
-		Log("Dumping HKEY_LOCAL_MACHINE\\Services before activating service:");
-		DumpRegKey(hKey, L"\\Services");
-		RegCloseKey(hKey);
-		Log("Dump finished");
-	}
-	// Dump Softwares keys
-	if (OpenedKey(HKEY_LOCAL_MACHINE, L"\\Software", &hKey))
-	{
-		Log("Dumping HKEY_LOCAL_MACHINE\\Software:");
-		DumpRegKey(hKey, L"\\Software");
-		RegCloseKey(hKey);
-		Log("Dump finished");
-	}
-#endif
+	HKEY hKey = NULL, hSubKey = NULL;
 
 	path  = malloc(MAX_PATH);
 	wPath = malloc(2*MAX_PATH);
@@ -434,6 +438,265 @@ Install_Exit(HWND hwndparent, LPCTSTR pszinstalldir, WORD cfaileddirs,
 	free(wPath);
 	free(path);
 
+	/*
+	 * Setup registry from setup DLL
+	 */
+	Log("About to setup service registry as super-service");
+
+	if (OpenedKey(HKEY_LOCAL_MACHINE, L"\\Services", &hKey))
+	{
+		DWORD dwDispo = 0, dwType = 0, dwData = 0, dwDataSize = 0 ;
+		LPTSTR wData = NULL;
+
+		// Create service key in registry
+		if (RegCreateKeyEx(hKey, WAPPNAME, 0, NULL, 0, 0, NULL,
+		                 &hSubKey, &dwDispo) == ERROR_SUCCESS)
+		{
+			switch (dwDispo)
+			{
+				case REG_CREATED_NEW_KEY:
+					Log("HKLM\\Services\\"APPNAME" created");
+					break;
+				case REG_OPENED_EXISTING_KEY:
+				default:
+					Log("HKLM\\Services\\"APPNAME" opened");
+					break;
+			}
+			RegCloseKey(hKey);
+			hKey = hSubKey;
+
+			/*
+			 * Set Context in registry
+			 * This value must match the one handled in GWA_Init
+			 * 0: Normal service / 1: Super-services
+			 * See https://blogs.msdn.microsoft.com/cenet/2005/12/14/what-the-service_init_stopped-flag-really-means/
+			 * https://blogs.msdn.microsoft.com/cenet/2006/11/28/services-exe-migration-for-applications-in-ce-6-0/
+			 */
+			dwType = REG_DWORD;
+			dwData = 1;
+			dwDataSize = sizeof(dwData);
+			if (os.dwMajorVersion < 6)
+			{
+				if (RegSetValueEx(hKey, L"Context", 0, dwType,
+								(LPBYTE)&dwData, dwDataSize) == ERROR_SUCCESS)
+				{
+					Log("Service Context set to %d in registry", dwData);
+				}
+				else
+				{
+					Log("Failed to set service Context in registry");
+					DumpError();
+				}
+			} else {
+				if (RegSetValueEx(hKey, L"ServiceContext", 0, dwType,
+								(LPBYTE)&dwData, dwDataSize) == ERROR_SUCCESS)
+				{
+					Log("Service ServiceContext set to %d in registry", dwData);
+				}
+				else
+				{
+					Log("Failed to set service ServiceContext in registry");
+					DumpError();
+				}
+			}
+
+			// Set Flags in registry
+			dwType = REG_DWORD;
+			dwData = 2;
+			dwDataSize = sizeof(dwData);
+			if (RegSetValueEx(hKey, L"Flags", 0, dwType,
+							(LPBYTE)&dwData, dwDataSize) == ERROR_SUCCESS)
+			{
+				Log("Service Flags set to %d in registry", dwData);
+			}
+			else
+			{
+				Log("Failed to set service Flags in registry");
+				DumpError();
+			}
+
+			// Set Index in registry
+			dwType = REG_DWORD;
+			dwData = 0;
+			dwDataSize = sizeof(dwData);
+			if (RegSetValueEx(hKey, L"Index", 0, dwType,
+							(LPBYTE)&dwData, dwDataSize) == ERROR_SUCCESS)
+			{
+				Log("Service Index set to %d in registry", dwData);
+			}
+			else
+			{
+				Log("Failed to set service Index in registry");
+				DumpError();
+			}
+
+			// Set Keep in registry
+			dwType = REG_DWORD;
+			dwData = 1;
+			dwDataSize = sizeof(dwData);
+			if (RegSetValueEx(hKey, L"Keep", 0, dwType,
+							(LPBYTE)&dwData, dwDataSize) == ERROR_SUCCESS)
+			{
+				Log("Service Keep set to %d in registry", dwData);
+			}
+			else
+			{
+				Log("Failed to set service Keep in registry");
+				DumpError();
+			}
+
+			// Set Order in registry
+			dwType = REG_DWORD;
+			dwData = 16;
+			dwDataSize = sizeof(dwData);
+			if (RegSetValueEx(hKey, L"Order", 0, dwType,
+							(LPBYTE)&dwData, dwDataSize) == ERROR_SUCCESS)
+			{
+				Log("Service Order set to %d in registry", dwData);
+			}
+			else
+			{
+				Log("Failed to set service Order in registry");
+				DumpError();
+			}
+
+			// Set Prefix in registry
+			dwType = REG_SZ;
+			wData = L"GWA";
+			dwDataSize = sizeof(TCHAR)*(wcslen(wData)+1);
+			if (RegSetValueEx(hKey, L"Prefix", 0, dwType,
+							(LPBYTE)wData, dwDataSize) == ERROR_SUCCESS)
+			{
+				Log("Service Prefix set in registry");
+			}
+			else
+			{
+				Log("Failed to set service Prefix in registry");
+				DumpError();
+			}
+
+			// Set Dll in registry
+			dwType = REG_SZ;
+			wData = L"glpi-agent.dll";
+			dwDataSize = sizeof(TCHAR)*(wcslen(wData)+1);
+			if (RegSetValueEx(hKey, L"Dll", 0, dwType,
+							(LPBYTE)wData, dwDataSize) == ERROR_SUCCESS)
+			{
+				Log("Service Dll set in registry");
+			}
+			else
+			{
+				Log("Failed to set service Dll in registry");
+				DumpError();
+			}
+
+			// Set DisplayName in registry
+			dwType = REG_SZ;
+			wData = WAPPNAME;
+			dwDataSize = sizeof(TCHAR)*(wcslen(wData)+1);
+			if (RegSetValueEx(hKey, L"DisplayName", 0, dwType,
+							(LPBYTE)wData, dwDataSize) == ERROR_SUCCESS)
+			{
+				Log("Service DisplayName set in registry");
+			}
+			else
+			{
+				Log("Failed to set service DisplayName in registry");
+				DumpError();
+			}
+
+			// Set Description in registry
+			dwType = REG_SZ;
+			wData = L"GLPI Agent service v"VERSION;
+			dwDataSize = sizeof(TCHAR)*(wcslen(wData)+1);
+			if (RegSetValueEx(hKey, L"Description", 0, dwType,
+							(LPBYTE)wData, dwDataSize) == ERROR_SUCCESS)
+			{
+				Log("Service Description set in registry");
+			}
+			else
+			{
+				Log("Failed to set service Description in registry");
+				DumpError();
+			}
+
+			// Create super-service key in registry
+			if (RegCreateKeyEx(hKey, L"Accept", 0, NULL, 0, 0, NULL,
+							&hSubKey, &dwDispo) == ERROR_SUCCESS)
+			{
+				switch (dwDispo)
+				{
+					case REG_CREATED_NEW_KEY:
+						Log("HKLM\\Service\\"APPNAME"\\Accept created");
+						break;
+					case REG_OPENED_EXISTING_KEY:
+					default:
+						Log("HKLM\\Service\\"APPNAME"\\Accept opened");
+						break;
+				}
+				RegCloseKey(hKey);
+				hKey = hSubKey;
+				if (RegCreateKeyEx(hKey, L"TCP-62354", 0, NULL, 0, 0, NULL,
+								&hSubKey, &dwDispo) == ERROR_SUCCESS)
+				{
+					switch (dwDispo)
+					{
+						case REG_CREATED_NEW_KEY:
+							Log("HKLM\\Service\\"APPNAME"\\Accept\\TCP-62354 created");
+							break;
+						case REG_OPENED_EXISTING_KEY:
+						default:
+							Log("HKLM\\Service\\"APPNAME"\\Accept\\TCP-62354 opened");
+							break;
+					}
+					RegCloseKey(hKey);
+					hKey = hSubKey;
+
+					// Set TCP-62354 in registry
+					{
+						SOCKADDR_IN portData ;
+						memset(&portData, 0, sizeof(portData));
+						portData.sin_family = SOCK_DGRAM;
+						portData.sin_port   = 62354;
+						dwType = REG_BINARY;
+						dwDataSize = sizeof(portData);
+						if (RegSetValueEx(hKey, L"SockAddr", 0, dwType,
+										(LPBYTE)&portData, dwDataSize) == ERROR_SUCCESS)
+						{
+							Log("Service SockAddr set in registry");
+						}
+						else
+						{
+							Log("Failed to set service SockAddr in registry");
+							DumpError();
+						}
+					}
+				}
+				else
+				{
+					Log("Failed to setup service TCP-62354 key in registry");
+					DumpError();
+				}
+			}
+			else
+			{
+				Log("Failed to setup service Accept key in registry");
+				DumpError();
+			}
+		}
+		else
+		{
+			Log("Failed to create service base key in registry");
+			DumpError();
+		}
+		RegCloseKey(hKey);
+	}
+	else
+	{
+		Log("Can't try to setup service in registry");
+		DumpError();
+	}
+
 	if (cfaileddirs>0)
 		Log("Failed dirs      : %d", cfaileddirs);
 	if (cfailedfiles>0)
@@ -472,6 +735,11 @@ Install_Exit(HWND hwndparent, LPCTSTR pszinstalldir, WORD cfaileddirs,
 		Log("Installation not fully completed");
 	}
 
+#ifdef TEST
+	Log("Dumping registry while service installed...");
+	DebugRegistry();
+#endif
+
 	return codeINSTALL_EXIT_DONE;
 }
 
@@ -487,6 +755,15 @@ Uninstall_Init(HWND hwndparent, LPCTSTR pszinstalldir)
 	HKEY hKey = NULL;
 	DWORD EditorSubKeys = 0, EditorValues = 0;
 
+	// Initializes OS informations
+	os.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
+	if (!GetVersionEx( &os ))
+	{
+		Log("Failed to get system version");
+		// Must not happen, but just default to wince 5 while failing
+		os.dwMajorVersion = 5;
+	}
+
 	length = wcslen(pszinstalldir)+1;
 	installdir = malloc(length);
 	wcstombs(installdir, pszinstalldir, length);
@@ -494,22 +771,8 @@ Uninstall_Init(HWND hwndparent, LPCTSTR pszinstalldir)
 	free(installdir);
 
 #ifdef TEST
-	// Dump Services keys
-	if (OpenedKey(HKEY_LOCAL_MACHINE, L"\\Services", &hKey))
-	{
-		Log("Dumping HKEY_LOCAL_MACHINE\\Services before activating service:");
-		DumpRegKey(hKey, L"\\Services");
-		RegCloseKey(hKey);
-		Log("Dump finished");
-	}
-	// Dump Softwares keys
-	if (OpenedKey(HKEY_LOCAL_MACHINE, L"\\Software", &hKey))
-	{
-		Log("Dumping HKEY_LOCAL_MACHINE\\Software:");
-		DumpRegKey(hKey, L"\\Software");
-		RegCloseKey(hKey);
-		Log("Dump finished");
-	}
+	Log("Dumping registry before disabling service...");
+	DebugRegistry();
 #endif
 
 	// Disable the service
@@ -535,22 +798,32 @@ Uninstall_Init(HWND hwndparent, LPCTSTR pszinstalldir)
 		Log("Removing " APPNAME " service configuration");
 		// SubKey to delete
 		RegDeleteKey(hKey, L"Accept");
-		// Values installed from inf
 		RegDeleteValue(hKey, L"Dll");
 		RegDeleteValue(hKey, L"Order");
 		RegDeleteValue(hKey, L"Keep");
 		RegDeleteValue(hKey, L"Prefix");
 		RegDeleteValue(hKey, L"Index");
-		RegDeleteValue(hKey, L"Context");
 		RegDeleteValue(hKey, L"DisplayName");
 		RegDeleteValue(hKey, L"Description");
 		RegDeleteValue(hKey, L"Flags");
+		if (os.dwMajorVersion < 6)
+		{
+			RegDeleteValue(hKey, L"Context");
+		} else {
+			RegDeleteValue(hKey, L"ServiceContext");
+			// Added by system
+			RegDeleteValue(hKey, L"UserProcGroup");
+		}
 		RegCloseKey(hKey);
 	}
 
 	if (OpenedKey(HKEY_LOCAL_MACHINE, L"\\Services", &hKey))
 	{
-		RegDeleteKey(hKey, WAPPNAME);
+		if (RegDeleteKey(hKey, WAPPNAME) != ERROR_SUCCESS)
+		{
+			Log("Failure while removing service base registry key");
+			DumpError();
+		}
 		RegCloseKey(hKey);
 		Log(APPNAME " service removed");
 	}
@@ -642,6 +915,11 @@ Uninstall_Exit(HWND hwndparent)
 
 	Log(APPNAME " uninstalled");
 
+#ifdef TEST
+	Log("Dumping registry on uninstalled service...");
+	DebugRegistry();
+#endif
+
 	return codeUNINSTALL_EXIT_DONE;
 }
 
@@ -652,13 +930,15 @@ DllMain(HANDLE hModule, DWORD dwReason, LPVOID lpReserved)
 
 	if (hFile == NULL)
 	{
-		hFile = freopen( "\\Windows\\" APPNAME "-install.txt", "a+", stdout );
+		hFile = freopen( cstrInstallJournal, "a+", stdout );
 	}
 
 	switch (dwReason)
 	{
 		case DLL_PROCESS_ATTACH:
+#ifdef TEST
 			fprintf(stderr, "%s: DllMain: loading\n", hdr);
+#endif
 			Log("%s: Library loaded", hdr);
 			break;
 		case DLL_THREAD_ATTACH:
@@ -668,7 +948,9 @@ DllMain(HANDLE hModule, DWORD dwReason, LPVOID lpReserved)
 			//Log("%s: thread detached", hdr);
 			break;
 		case DLL_PROCESS_DETACH:
+#ifdef TEST
 			fprintf(stderr, "%s: DllMain: unloading\n", hdr);
+#endif
 			Log("%s: unloading", hdr);
 			if (hFile != NULL)
 				fclose(hFile);

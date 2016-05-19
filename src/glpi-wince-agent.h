@@ -3,7 +3,7 @@
 #define APPNAME "GLPI-Agent"
 
 #define MAJOR_VERSION	1
-#define MINOR_VERSION	0
+#define MINOR_VERSION	1
 
 #define DEFAULTVARDIR      "var"
 #define DEFAULTINSTALLPATH "\\Program Files\\" APPNAME
@@ -18,8 +18,8 @@
 #define XSTRING(s)			STRING(s)
 
 #define VERSION				XSTRING(MAJOR_VERSION.MINOR_VERSION)
-#define WEDITOR				L""EDITOR
-#define WAPPNAME			L""APPNAME
+#define WEDITOR				L"Teclib"
+#define WAPPNAME			L"GLPI-Agent"
 
 #define IDR_MAINICON			101
 #define IDR_MAINMENU			102

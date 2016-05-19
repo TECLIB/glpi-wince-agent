@@ -328,6 +328,7 @@ void getHardware(void)
 
 	// Add fields
 	addField( Hardware, "NAME", getHostname() );
+	VersionInformation.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
 	if (GetVersionEx( &VersionInformation ))
 	{
 		// CE OS 5.2.1235 (Build 17740.0.2.0)

@@ -41,26 +41,16 @@ AgentFile = 0, %InstallDir%
 Links = 0, %CE11% ; "\Windows\Start Menu" directory
 
 [AgentFile]
-glpi-wince-agent.exe,glpi-wince-agent.exe,,0x00000002
+glpi-wince-agent.exe,glpi-agent.exe,,0x00000002
 
 [AgentService]
-glpi-wince-agent-service.dll,glpi-wince-agent-service.dll,,0x00000002
+glpi-wince-agent-service.dll,glpi-agent.dll,,0x00000002
 
 [AddRegistry]
 HKLM,\Software\Teclib\GLPI-Agent,InstallDir,0x00000000,%InstallDir%
 HKLM,\Software\Teclib\GLPI-Agent,Version,0x00000000,%AgentVersion%
 HKLM,\Software\Teclib\GLPI-Agent,KeepFiles,0x00010001,0
-HKLM,\Services\GLPI-Agent,Context,0x00010001,1
-HKLM,\Services\GLPI-Agent,Description,0x00000000,"GLPI Agent service v%AgentVersion%"
-HKLM,\Services\GLPI-Agent,DisplayName,0x00000000,GLPI-Agent
-HKLM,\Services\GLPI-Agent,Dll,0x00000000,glpi-wince-agent-service.dll
-HKLM,\Services\GLPI-Agent,Flags,0x00010001,0
-HKLM,\Services\GLPI-Agent,Index,0x00010001,0
-HKLM,\Services\GLPI-Agent,Keep,0x00010001,1
-HKLM,\Services\GLPI-Agent,Order,0x00010001,16
-HKLM,\Services\GLPI-Agent,Prefix,0x00000000,GWA
-HKLM,\Services\GLPI-Agent\Accept\TCP-62354,SockAddr,0x00000001,02,00,92,f3,00,00,00,00,00,00,00,00,00,00,00,00
 
 [Links]
 ; shortcut to a file, created in the standard destination path %CE11% (/Windows/Start Menu/)
-%LinkFilename%,0,"glpi-wince-agent.exe",%CE11%
+%LinkFilename%,0,"glpi-agent.exe",%CE11%

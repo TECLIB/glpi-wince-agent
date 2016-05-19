@@ -48,7 +48,7 @@ DWORD GWA_Init( DWORD dwContext )
 {
 	DWORD ret = 0;
 #ifdef STDERR
-	stderrf("%s: GWA_Init()", hdr);
+	stderrf("%s: GWA_Init(%d)", hdr, dwContext);
 #endif
 
 	/*
@@ -80,7 +80,7 @@ BOOL GWA_Deinit( DWORD dwContext )
 
 	if (dwContext == 1)
 	{
-		dwServiceState = SERVICE_STATE_UNINITIALIZED;
+		dwServiceState = SERVICE_STATE_UNLOADING;
 		Log("Stopping " APPNAME " v" VERSION " service...");
 		Stop();
 #ifdef STDERR
@@ -342,9 +342,6 @@ BOOL GWA_Open( DWORD dwData, DWORD dwAccess, DWORD dwShareMode )
 	stderrf("%s: GWA_Open(0x%08x,0x%08x,0x%08x)", hdr, dwData, dwAccess, dwShareMode);
 #endif
 
-	// Always free journal file
-	//LoggerQuit();
-
 	return TRUE;
 }
 
@@ -353,9 +350,6 @@ DWORD GWA_Read( DWORD dwData, LPVOID pBuf, DWORD dwLen )
 #ifdef STDERR
 	stderrf("%s: GWA_Read((0x%08x,...,0x%08x)", hdr, dwData, dwLen);
 #endif
-
-	// Always free journal file
-	//LoggerQuit();
 
 	return 0;
 }
@@ -408,9 +402,6 @@ BOOL GWA_Close( DWORD dwData )
 #ifdef STDERR
 	stderrf("%s: GWA_Close(0x%08x)", hdr, dwData);
 #endif
-
-	// Always free journal file
-	//LoggerQuit();
 
 	return TRUE;
 }

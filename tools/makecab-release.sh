@@ -1,7 +1,12 @@
 #! /bin/bash
 
-let TEST=0
-[ "$1" == "--test" ] && let TEST++
+let TEST=0 UPX=0
+while [ -n "$1" ]
+do
+	[ "$1" == "--test" ] && let TEST++
+	[ "$1" == "--upx" ]  && let UPX++
+	shift
+done
 
 set -e
 
@@ -42,9 +47,9 @@ read define minor_string MINOR <<<$( egrep '^#define MINOR_VERSION' src/glpi-win
 sed -e "s/^AgentVersion = .*/AgentVersion = \"$MAJOR.$MINOR\"/" \
 	src/glpi-wince-agent.inf >glpi-wince-agent.inf
 
-if [ -x "$( which upx 2>/dev/null )" ]; then
+if [ "$UPX" -ne 0 -a -x "$( which upx 2>/dev/null )" ]; then
 	upx --compress-icons=0 --best src/glpi-wince-agent.exe
-	upx  --best src/glpi-wince-agent-setup.dll
+	upx --best src/glpi-wince-agent-setup.dll
 	upx --best src/glpi-wince-agent-service.dll
 fi
 
