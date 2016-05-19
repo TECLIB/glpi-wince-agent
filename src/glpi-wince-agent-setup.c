@@ -6,6 +6,7 @@
 #include <windows.h>
 #include <shlobj.h>
 #include <service.h>
+#include <winioctl.h>
 
 #include "glpi-wince-agent.h"
 
@@ -123,14 +124,30 @@ void DumpError(void)
 void StopAndDisableService(LPCSTR version)
 {
 	HANDLE hService = NULL;
-	DWORD dwDllBuf = 0;
+	DWORD dwDllBuf = 0, dwRet = 0;
 
 	Log("Looking to stop and disable service...");
 
-	hService = GetServiceHandle(L"GWA0:", NULL, &dwDllBuf);
-
+	if (os.dwMajorVersion < 6)
+	{
+		hService = GetServiceHandle(L"GWA0:", NULL, &dwDllBuf);
+	} else {
+		hService = CreateFile(L"GWA0:",GENERIC_READ|GENERIC_WRITE,0,NULL,OPEN_EXISTING,0,NULL);
+	}
 	if (hService != INVALID_HANDLE_VALUE)
 	{
+		if (os.dwMajorVersion < 6)
+		{
+			if (DeviceIoControl(hService, IOCTL_SERVICE_STOP, NULL, 0, NULL, 0, &dwRet, NULL))
+			{
+				Log("Service stop requested");
+			}
+			else
+			{
+				Log("Failed to transmit stop request");
+			}
+		}
+
 		if (DeregisterService(hService))
 		{
 			Log(APPNAME " v%s service disabled", version);
@@ -437,6 +454,8 @@ Install_Exit(HWND hwndparent, LPCTSTR pszinstalldir, WORD cfaileddirs,
 	}
 	free(wPath);
 	free(path);
+
+	// TODO: Update DLLs file attributes as protected system file
 
 	/*
 	 * Setup registry from setup DLL
@@ -819,6 +838,7 @@ Uninstall_Init(HWND hwndparent, LPCTSTR pszinstalldir)
 
 	if (OpenedKey(HKEY_LOCAL_MACHINE, L"\\Services", &hKey))
 	{
+		// TODO: Does not work on some devices. Btw this is not critical.
 		if (RegDeleteKey(hKey, WAPPNAME) != ERROR_SUCCESS)
 		{
 			Log("Failure while removing service base registry key");
