@@ -188,7 +188,7 @@ BOOL GWA_IOControl( DWORD dwData, DWORD dwCode, PBYTE pBufIn,
 			}
 			else
 			{
-				Error("Got unexpected sockaddr deregister");
+				Error("Got unexpected sockaddr deregister, current state: 0x%x", dwServiceState);
 				dwError = ERROR_SERVICE_NOT_ACTIVE;
 			}
 			break;
