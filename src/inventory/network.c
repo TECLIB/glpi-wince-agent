@@ -47,10 +47,10 @@ static void FormatPhysicalAddress(BYTE *addr, int addrlen, LPSTR buf)
 		_itoa( addr[i] & 0x0F, ptr, 16);
 		ptr++;
 
-		// Add the dash if we're not at the end
+		// Add a colon if we're not at the end
 		if (i+1 < addrlen)
 		{
-			*ptr = '-';
+			*ptr = ':';
 			ptr++;
 		}
 	}
