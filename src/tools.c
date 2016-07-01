@@ -249,6 +249,139 @@ void ToolsQuit(void)
 	sHostname  = NULL;
 }
 
+LPSTR getRegString( HKEY hive, LPCSTR subkey, LPCSTR value )
+{
+	LPSTR result = NULL;
+
+#ifdef STDERR
+	stderrf("Looking for %s/%s string in registry", subkey, value);
+#endif
+	if (hive != NULL && subkey != NULL && value != NULL)
+	{
+		LPWSTR wKeypath = NULL;
+		HKEY hKey = NULL;
+		int length = strlen(subkey)+1;
+		wKeypath = allocate(2*length, "subkeypath");
+		swprintf( wKeypath, L"%hs", subkey );
+		if (OpenedKey(hive, wKeypath, &hKey))
+		{
+			WCHAR *wValue = NULL;
+			LPBYTE lpData = NULL;
+			DWORD dwType = REG_SZ, dwDataSize = 2*MAX_PATH;
+			length = strlen(value)+1;
+			wValue = allocate(2*length, "valuename");
+			lpData = allocate(dwDataSize, "getRegString");
+			swprintf( wValue, L"%hs", value );
+			if (RegQueryValueEx(hKey, wValue, NULL, &dwType,
+								lpData, &dwDataSize) == ERROR_SUCCESS)
+			{
+				if (dwType == REG_SZ)
+				{
+					dwDataSize /= 2;
+					if (dwDataSize && dwDataSize<MAX_PATH)
+					{
+						result = allocate(dwDataSize, "RegValue");
+						memset( result, 0, dwDataSize );
+						wcstombs(result, (LPTSTR)lpData, dwDataSize);
+						Debug2("Found string %s\\%s='%s'", subkey, value, result);
+#ifdef STDERR
+						stderrf("Found %s\\%s=%s in reg, len=%d", subkey, value, result, dwDataSize);
+#endif
+					}
+					else
+					{
+						Debug2("Can't get %s\\%s string", subkey, value);
+#ifdef STDERR
+						stderrf("Failed to read %s\\%s string in registry (len=%d)", subkey, value, dwDataSize);
+#endif
+					}
+				}
+				else
+				{
+#ifdef STDERR
+					stderrf("Failed to read %s\\%s as not a string in registry (len=%d;type=%d)", subkey, value, dwDataSize, dwType);
+#endif
+					Debug2("Can't get %s\\%s as not a string (%d)", subkey, value, dwType);
+				}
+			}
+			else
+			{
+				Debug2("%s\\%s string not available", subkey, value);
+			}
+			free(lpData);
+			free(wValue);
+			RegCloseKey(hKey);
+		}
+#ifdef STDERR
+		else
+		{
+			stderrf("Failed to read %s path in registry", value);
+		}
+#endif
+		free(wKeypath);
+	}
+
+	return result;
+}
+
+DWORD getRegValue( HKEY hive, LPCSTR subkey, LPCSTR value )
+{
+	DWORD result = 0;
+
+#ifdef STDERR
+	stderrf("Looking for %s/%s value in registry", subkey, value);
+#endif
+	if (hive != NULL && subkey != NULL && value != NULL)
+	{
+		LPWSTR wKeypath = NULL;
+		HKEY hKey = NULL;
+		int length = strlen(subkey)+1;
+		wKeypath = allocate(2*length, "subkeypath");
+		swprintf( wKeypath, L"%hs", subkey );
+		if (OpenedKey(hive, wKeypath, &hKey))
+		{
+			WCHAR *wValue = NULL;
+			DWORD dwType = REG_DWORD, dwDataSize = sizeof(result);
+			length = strlen(value)+1;
+			wValue = allocate(2*length, "valuename");
+			swprintf( wValue, L"%hs", value );
+			if (RegQueryValueEx(hKey, wValue, NULL, &dwType,
+								(LPBYTE)&result, &dwDataSize) == ERROR_SUCCESS)
+			{
+				if (dwType == REG_DWORD)
+				{
+					Debug2("Found value %s\\%s=%d", subkey, value, result);
+#ifdef STDERR
+					stderrf("Found %s\\%s=%d in reg", subkey, value, result);
+#endif
+				}
+				else
+				{
+					Error("Can't get %s\\%s value", subkey, value);
+#ifdef STDERR
+					stderrf("Failed to read %s\\%s as not a dword in registry (len=%d;type=%d)", subkey, value, dwDataSize, dwType);
+#endif
+				}
+			}
+			else
+			{
+				Debug2("%s\\%s value not available", subkey, value);
+			}
+			free(wValue);
+			RegCloseKey(hKey);
+		}
+#ifdef STDERR
+		else
+		{
+			stderrf("Failed to read %s path in registry", value);
+		}
+#endif
+		free(wKeypath);
+	}
+
+	return result;
+}
+
 LPSTR getRegPath( LPCSTR value )
 {
 	LPSTR path = NULL;

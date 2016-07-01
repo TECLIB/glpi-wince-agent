@@ -205,6 +205,8 @@ LPSTR getTimestamp(void);
 void computeNextRunDate(void);
 BOOL timeToSubmit(void);
 LPSYSTEMTIME getLocalTime(void);
+LPSTR getRegString( HKEY hive, LPCSTR subkey, LPCSTR value );
+DWORD getRegValue( HKEY hive, LPCSTR subkey, LPCSTR value );
 LPSTR getRegPath( LPCSTR value );
 LPSTR vsPrintf( LPCSTR fmt, ... );
 LPSTR hexstring(BYTE *addr, int addrlen);
