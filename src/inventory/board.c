@@ -305,6 +305,7 @@ void getHardware(void)
 	LIST *Hardware = NULL;
 	HINSTANCE hCoreDll = NULL;
 	FARPROC GetDeviceUniqueID = NULL;
+	LPSTR Name = NULL;
 
 	BYTE rgDeviceId[GETDEVICEUNIQUEID_V1_OUTPUT];
 	DWORD cbDeviceId = sizeof(rgDeviceId);
@@ -326,8 +327,21 @@ void getHardware(void)
 	// Initialize HARDWARE
 	Hardware = createList("HARDWARE");
 
+	// We can search name first as TerminalID
+	if (getRegValue(HKEY_LOCAL_MACHINE,
+	                "\\Software\\"EDITOR"\\"APPNAME, "SearchTerminalID"))
+	{
+		// Search name first as Avalanche TerminalID
+		Name = getRegString( HKEY_LOCAL_MACHINE,
+			"\\Software\\Wavelink\\Avalanche\\State",
+			"TerminalID");
+	}
+	// Finally set name from terminal hostname as default
+	if (Name == NULL)
+		Name = getHostname();
+
 	// Add fields
-	addField( Hardware, "NAME", getHostname() );
+	addField( Hardware, "NAME", Name );
 	VersionInformation.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
 	if (GetVersionEx( &VersionInformation ))
 	{
