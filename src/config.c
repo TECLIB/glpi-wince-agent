@@ -96,7 +96,7 @@ static LPSTR readvalue(LPSTR start, LPCSTR key)
 CONFIG ConfigLoad(LPSTR path)
 {
 	FILE *hConfig;
-	LPSTR buffer, found, start;
+	LPSTR buffer = NULL, found, start;
 	CONFIG config = { NULL, NULL, NULL, DEFAULTDEBUG, FALSE };
 
 	// Initialize config file path
@@ -129,12 +129,18 @@ CONFIG ConfigLoad(LPSTR path)
 	}
 
 #ifdef STDERR
-		stderrf( "configFile='%s'", configFile );
+	stderrf( "configFile='%s'", configFile );
 #endif
 
 	hConfig = fopen( configFile, "r" );
 	if( hConfig == NULL )
 	{
+		// Anyway try to check if server is to be pre-loaded as a
+		// defautl conf should be written now
+		config.server = getRegString( HKEY_LOCAL_MACHINE,
+			"\\Software\\"EDITOR"\\"APPNAME,
+			"ServerAgentSetup");
+
 		config.loaded = FALSE;
 		DebugError("Can't read config from %s file", configFile);
 		return config;
