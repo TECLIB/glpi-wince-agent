@@ -12,6 +12,17 @@ STATIC  = -static -static-libgcc
 DEBUG   = 
 TEST    = 
 STDERR  = 
+SETUP   = 
+
+# CAB Installer server url preload configuration
+# URL will be inserted in config file during first run if no config file is found
+SERVER_URL = 
+#SERVER_URL = http://glpi/plugins/fusioninventory/
+
+# CAB Installer TerminalID search, set it to 1 to activate
+SEARCH_TERMINALID = 
+
+-include Makefile.local
 
 ifneq ($(STATIC),)
 	CFLAGS +=  ${STATIC}
@@ -27,6 +38,14 @@ endif
 
 ifneq ($(TEST),)
 	CFLAGS += -DTEST
+endif
+
+ifneq ($(SERVER_URL),)
+	SETUP += -DSERVER_URL='"${SERVER_URL}"'
+endif
+
+ifneq ($(SEARCH_TERMINALID),)
+	SETUP += -DSEARCH_TERMINALID=${SEARCH_TERMINALID}
 endif
 
 CPLOBJS = glpi-wince-agent-cpl.o \
@@ -51,7 +70,7 @@ debug-registry.exe: debug-registry.c
 	${STRIP} $@
 
 glpi-wince-agent-setup.dll: glpi-wince-agent-setup.c
-	${CC} -shared ${CFLAGS} -o $@ $?
+	${CC} -shared ${CFLAGS} ${SETUP} -o $@ $?
 	${STRIP} $@
 
 glpi-wince-agent-cpl.dll: ${CPLOBJS}

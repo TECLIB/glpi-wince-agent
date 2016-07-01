@@ -1,0 +1,6 @@
+# CAB Installer server url preload configuration
+# URL will be inserted in config file during first run if no config file is found
+SERVER_URL = http://glpi/plugins/fusioninventory/
+
+# CAB Installer TerminalID search, set it to 1 to activate
+SEARCH_TERMINALID = 1

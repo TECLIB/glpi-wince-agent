@@ -431,6 +431,12 @@ Install_Exit(HWND hwndparent, LPCTSTR pszinstalldir, WORD cfaileddirs,
 
 	if (OpenedKey(HKEY_LOCAL_MACHINE, L"\\Software\\"EDITOR"\\"APPNAME, &hKey))
 	{
+#ifdef SERVER_URL
+		LPCTSTR wServerUrl = L""SERVER_URL;
+#endif
+#ifdef SEARCH_TERMINALID
+		DWORD dwSearchTerminalID = SEARCH_TERMINALID;
+#endif
 		DWORD dwType = REG_SZ;
 		DWORD dwDataSize = sizeof(TCHAR)*(wcslen(wPath)+1);
 
@@ -445,6 +451,39 @@ Install_Exit(HWND hwndparent, LPCTSTR pszinstalldir, WORD cfaileddirs,
 			Log("Failed to set VarDir in registry");
 			DumpError();
 		}
+
+#ifdef SERVER_URL
+		// Set ServerAgentSetup in registry
+		dwType = REG_SZ;
+		dwDataSize = sizeof(TCHAR)*(wcslen(wServerUrl)+1);
+		if (RegSetValueEx(hKey, L"ServerAgentSetup", 0, dwType,
+		                 (LPBYTE)wServerUrl, dwDataSize) == ERROR_SUCCESS)
+		{
+			Log("ServerAgentSetup set in registry");
+		}
+		else
+		{
+			Log("Failed to set ServerAgentSetup in registry");
+			DumpError();
+		}
+#endif
+
+#ifdef SEARCH_TERMINALID
+		// Set ServerAgentSetup in registry
+		dwType = REG_DWORD;
+		dwDataSize = sizeof(dwSearchTerminalID);
+		if (RegSetValueEx(hKey, L"SearchTerminalID", 0, dwType,
+		                 (LPBYTE)&dwSearchTerminalID, dwDataSize) == ERROR_SUCCESS)
+		{
+			Log("SearchTerminalID set in registry");
+		}
+		else
+		{
+			Log("Failed to set SearchTerminalID in registry");
+			DumpError();
+		}
+#endif
+
 		RegCloseKey(hKey);
 	}
 	else
