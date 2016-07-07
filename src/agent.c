@@ -31,8 +31,15 @@ LPSTR FileName = NULL;
 LPSTR CurrentPath = NULL;
 LPSTR DeviceID = NULL;
 BOOL bInitialized = FALSE;
+BOOL bSuspended = FALSE;
 DWORD maxDelay = DEFAULT_MAX_DELAY ;
 FILETIME nextRunDate = { 0, 0 };
+HANDLE ThreadTrigger = NULL;
+DWORD ServiceId = 0;
+DWORD TriggerId = 0;
+
+// Only one thread can try to run an inventory at a time
+CRITICAL_SECTION InventoryThreadRunning;
 
 // local functions
 static LPSTR computeDeviceID(void);
@@ -101,18 +108,56 @@ void Init(void)
 	bInitialized = TRUE;
 }
 
+#ifdef GWA
+static DWORD WINAPI _lpStartTriggerThread(LPVOID lpParameter)
+{
+	while (1) {
+		// Sleep at least one second before try to run
+		Sleep(DEFAULT_MINIMAL_SLEEP>1000 ? DEFAULT_MINIMAL_SLEEP*1000 : 1000);
+		Run(FALSE);
+	}
+
+	return 0;
+}
+#endif
+
 void Start(void)
 {
 	if (bInitialized)
 		Quit();
 	Init();
+
+#ifdef GWA
+	// Service is activated on services event but we need to
+	// Start a thread to trigger Run() at regulary time
+	if (!ThreadTrigger) {
+		// Initialize critical section
+		InitializeCriticalSection(&InventoryThreadRunning);
+
+		ServiceId = GetCurrentThreadId();
+		Debug( "Starting Trigger thread (tid=%d)", ServiceId );
+
+		ThreadTrigger = CreateThread( NULL, 0,
+			_lpStartTriggerThread, &ServiceId, 0, &TriggerId);
+		CeSetThreadPriority( ThreadTrigger, THREAD_PRIORITY_IDLE );
+		Debug( "Trigger thread started (tid=%d)", TriggerId );
+		bSuspended = FALSE;
+	}
+#endif
 }
 
 #ifdef GWA
 void Run(BOOL force)
 {
+	// Don't run if a thread is still running an inventory
+	if (!TryEnterCriticalSection(&InventoryThreadRunning))
+	{
+		Debug2( "Skipping inventory run, another thread should be running" );
+		return;
+	}
+
 	// Write local inventory if desired
-	if (conf.local != NULL)
+	if (conf.local != NULL && strlen(conf.local))
 	{
 		Log( "Running inventory..." );
 		RunInventory();
@@ -124,7 +169,7 @@ void Run(BOOL force)
 	}
 
 	// Send inventory if desired
-	if (conf.server != NULL)
+	if (conf.server != NULL && strlen(conf.server))
 	{
 		// While not forced, check if it's time to submit
 		if (force || timeToSubmit())
@@ -151,6 +196,8 @@ void Run(BOOL force)
 	FreeInventory();
 
 	Log( "Run finished" );
+
+	LeaveCriticalSection(&InventoryThreadRunning);
 }
 #else
 void RequestRun(void)
@@ -193,8 +240,36 @@ void RequestRun(void)
 }
 #endif
 
+#ifdef GWA
+void Resume(void)
+{
+	if (bSuspended && ThreadTrigger) {
+		ResumeThread(ThreadTrigger);
+		bSuspended = FALSE;
+	}
+}
+
+void Suspend(void)
+{
+	if (!bSuspended && ThreadTrigger) {
+		SuspendThread(ThreadTrigger);
+		bSuspended = TRUE;
+	}
+}
+#endif
+
 void Stop(void)
 {
+#ifdef GWA
+	if (ThreadTrigger) {
+		Debug( "Stopping trigger thread.." );
+		TerminateThread(ThreadTrigger, 0);
+		DeleteCriticalSection(&InventoryThreadRunning);
+		Debug( "Trigger thread stopped" );
+		ThreadTrigger = NULL;
+	}
+#endif
+
 	Quit();
 }
 

@@ -6,7 +6,8 @@ CC      = ${ARCH}-gcc
 WINDRES = ${ARCH}-windres
 STRIP   = ${ARCH}-strip
 OBJDUMP = ${ARCH}-objdump
-CFLAGS  = -g0 -Os -mpoke-function-name -mwin32 -Wall -DWIN32 -D_WIN32_WINNT=0x0501
+CFLAGS  = -g0 -Os -mpoke-function-name -mwin32 -Wall
+CFLAGS += -DWIN32 -D_WIN32_WINNT=0x0501 -D_WIN32_WINCE=0x0501
 LIBS    = -lcommctrl -liphlpapi -lws2 -lwininet
 STATIC  = -static -static-libgcc
 DEBUG   = 

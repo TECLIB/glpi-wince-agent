@@ -3,7 +3,7 @@
 #define APPNAME "GLPI-Agent"
 
 #define MAJOR_VERSION      1
-#define MINOR_VERSION      2
+#define MINOR_VERSION      3
 
 #define DEFAULTVARDIR      "var"
 #define DEFAULTINSTALLPATH "\\Program Files\\" APPNAME
@@ -54,6 +54,9 @@
 #define DEFAULT_MAX_DELAY        4*60
 #define DEFAULT_INITIAL_DELAY    10
 
+// Define minimal wait time in seconds between checks if time to run
+#define DEFAULT_MINIMAL_SLEEP    60
+
 // Define GLPI connection timeout in milliseconds
 #define GLPI_CONNECT_TIMEOUT     1000
 
@@ -78,6 +81,8 @@ void Stop(void);
 void Refresh(void);
 #ifdef GWA
 void Run(BOOL force);
+void Resume(void);
+void Suspend(void);
 #else
 void RequestRun(void);
 #endif

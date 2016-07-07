@@ -170,6 +170,8 @@ BOOL GWA_IOControl( DWORD dwData, DWORD dwCode, PBYTE pBufIn,
 				{
 					Log("Looking to run inventory...");
 					Run(FALSE);
+					// Finally check to resume trigger thread
+					Resume();
 				}
 			}
 			else
@@ -184,6 +186,8 @@ BOOL GWA_IOControl( DWORD dwData, DWORD dwCode, PBYTE pBufIn,
 			    (dwServiceState == SERVICE_STATE_ON))
 			{
 				dwError = ERROR_SUCCESS;
+				dwServiceState = SERVICE_STATE_STARTING_UP;
+				Suspend();
 				Log(APPNAME " waiting for listening socket");
 			}
 			else
