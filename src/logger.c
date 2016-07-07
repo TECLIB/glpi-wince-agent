@@ -50,6 +50,11 @@ BOOL bLoggerInit = FALSE;
 FILE *hStdErr = NULL;
 #endif
 
+// Avoid concurrent access to logger
+#ifdef GWA
+CRITICAL_SECTION SafeLogging;
+#endif
+
 #ifndef GWA
 static LPVOID getSystemError(BOOL freeBuffer)
 #else
@@ -153,7 +158,10 @@ void LoggerInit(void)
 
 		bLoggerInit = TRUE;
 
-#ifndef GWA
+#ifdef GWA
+		// Initialize critical section
+		InitializeCriticalSection(&SafeLogging);
+#else
 		Log( "Logger initialized" );
 		Debug( "Debug level enabled" );
 		Debug2("Debug2 level enabled" );
@@ -167,9 +175,11 @@ void LoggerQuit(void)
 	{
 		bLoggerInit = FALSE;
 
-		#ifndef GWA
-			Debug2( "Stopping logger..." );
-		#endif
+#ifdef GWA
+		DeleteCriticalSection(&SafeLogging);
+#else
+		Debug2( "Stopping logger..." );
+#endif
 
 		if( hLogger != NULL )
 			fclose( hLogger );
@@ -193,6 +203,7 @@ void Log(LPCSTR format, ...)
 	{
 		LoggerInit();
 	}
+	EnterCriticalSection(&SafeLogging);
 #endif
 
 	va_list args;
@@ -226,6 +237,9 @@ void Log(LPCSTR format, ...)
 	SetLastError(NO_ERROR);
 
 	va_end(args);
+#ifdef GWA
+	LeaveCriticalSection(&SafeLogging);
+#endif
 }
 
 void Error(LPCSTR format, ...)
@@ -237,6 +251,7 @@ void Error(LPCSTR format, ...)
 	{
 		LoggerInit();
 	}
+	EnterCriticalSection(&SafeLogging);
 #endif
 
 	va_list args;
@@ -280,6 +295,9 @@ void Error(LPCSTR format, ...)
 	SetLastError(NO_ERROR);
 
 	va_end(args);
+#ifdef GWA
+	LeaveCriticalSection(&SafeLogging);
+#endif
 }
 
 void Debug(LPCSTR format, ...)
@@ -291,6 +309,7 @@ void Debug(LPCSTR format, ...)
 	{
 		LoggerInit();
 	}
+	EnterCriticalSection(&SafeLogging);
 #endif
 
 	va_list args;
@@ -312,6 +331,9 @@ void Debug(LPCSTR format, ...)
 #endif
 
 	va_end(args);
+#ifdef GWA
+	LeaveCriticalSection(&SafeLogging);
+#endif
 }
 
 void Debug2(LPCSTR format, ...)
@@ -323,6 +345,7 @@ void Debug2(LPCSTR format, ...)
 	{
 		LoggerInit();
 	}
+	EnterCriticalSection(&SafeLogging);
 #endif
 
 	va_list args;
@@ -344,6 +367,9 @@ void Debug2(LPCSTR format, ...)
 #endif
 
 	va_end(args);
+#ifdef GWA
+	LeaveCriticalSection(&SafeLogging);
+#endif
 }
 
 void DebugError(LPCSTR format, ...)
@@ -355,6 +381,7 @@ void DebugError(LPCSTR format, ...)
 	{
 		LoggerInit();
 	}
+	EnterCriticalSection(&SafeLogging);
 #endif
 
 	va_list args;
@@ -382,6 +409,9 @@ void DebugError(LPCSTR format, ...)
 	SetLastError(NO_ERROR);
 
 	va_end(args);
+#ifdef GWA
+	LeaveCriticalSection(&SafeLogging);
+#endif
 }
 
 void RawDebug(LPCSTR format, LPBYTE buffer, ULONG size)
