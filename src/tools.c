@@ -169,18 +169,35 @@ static void addFileTimeMinutes( LPFILETIME lpFt, DWORD dwMinutes )
 	ft.LowPart  = lpFt->dwLowDateTime;
 	ft.HighPart = lpFt->dwHighDateTime;
 
-	ft.LowPart += (ULONG)dwMinutes*600000;
-	if ( (ULONG)ft.LowPart < (ULONG)lpFt->dwLowDateTime )
+	while (dwMinutes--)
 	{
-		ft.HighPart++;
+		ft.LowPart += 600000000;
+		if ( (ULONG)ft.LowPart < (ULONG)lpFt->dwLowDateTime )
+		{
+			ft.HighPart++;
+		}
+		lpFt->dwLowDateTime =  ft.LowPart;
+		lpFt->dwHighDateTime = ft.HighPart;
 	}
+}
 
-	lpFt->dwLowDateTime =  ft.LowPart;
-	lpFt->dwHighDateTime = ft.HighPart;
+static void LogTime(LPCSTR prefix, const LPFILETIME ThisTime)
+{
+	SYSTEMTIME SystemTime ;
+	FILETIME LocalFileTime;
+	if (FileTimeToLocalFileTime(ThisTime, &LocalFileTime) &&
+	    FileTimeToSystemTime(&LocalFileTime, &SystemTime))
+	{
+		Log("%s: %4d-%02d-%02d %02d:%02d:%02d", prefix,
+			SystemTime.wYear, SystemTime.wMonth,  SystemTime.wDay,
+			SystemTime.wHour, SystemTime.wMinute, SystemTime.wSecond
+		);
+	}
 }
 
 void computeNextRunDate(void)
 {
+	DWORD minutes = 0, base = DEFAULT_MAX_DELAY;
 #ifdef STDERR
 	stderrf("Current nextRunDate: 0x%08x:0x%08x",
 		nextRunDate.dwHighDateTime, nextRunDate.dwLowDateTime);
@@ -188,19 +205,22 @@ void computeNextRunDate(void)
 	// Initial delay
 	if (nextRunDate.dwLowDateTime == 0 && nextRunDate.dwHighDateTime == 0)
 	{
-		GetCurrentFT(&nextRunDate);
-		addFileTimeMinutes(&nextRunDate, DEFAULT_INITIAL_DELAY/2 +
-			Random()%(DEFAULT_INITIAL_DELAY/2));
+		base = DEFAULT_INITIAL_DELAY;
 	}
-	else
-	{
-		addFileTimeMinutes(&nextRunDate, DEFAULT_MAX_DELAY/2 +
-			Random()%(DEFAULT_MAX_DELAY/2));
-	}
+#ifdef DEBUG
+	LogTime("Current next run date", &nextRunDate);
+#endif
+	GetCurrentFT(&nextRunDate);
+	minutes = base/2 + Random()%(base/2);
+#ifdef DEBUG
+	Debug2("Adding %d minutes...", minutes);
+#endif
+	addFileTimeMinutes(&nextRunDate, minutes);
 #ifdef STDERR
 	stderrf("Computed nextRunDate: 0x%08x:0x%08x",
 		nextRunDate.dwHighDateTime, nextRunDate.dwLowDateTime);
 #endif
+	LogTime("Next run date not before", &nextRunDate);
 }
 
 BOOL timeToSubmit(void)
@@ -210,13 +230,22 @@ BOOL timeToSubmit(void)
 	stderrf("Getting current FT");
 #endif
 	GetCurrentFT(&now);
+#ifdef DEBUG
+	LogTime("Now", &now);
+#endif
 #ifdef STDERR
 	stderrf("Comparing current FT to nextRunDate: 0x%08x:0x%08x vs 0x%08x:0x%08x",
 		nextRunDate.dwHighDateTime, nextRunDate.dwLowDateTime,
 		now.dwHighDateTime, now.dwLowDateTime
 	);
 #endif
-	return (CompareFileTime(&nextRunDate,&now) < 0);
+	if (nextRunDate.dwHighDateTime<now.dwHighDateTime ||
+	    (nextRunDate.dwHighDateTime == now.dwHighDateTime &&
+	     nextRunDate.dwLowDateTime < now.dwLowDateTime))
+	{
+		return TRUE;
+	}
+	return FALSE;
 }
 
 LPSYSTEMTIME getLocalTime(void)

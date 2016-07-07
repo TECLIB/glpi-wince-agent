@@ -34,12 +34,14 @@ BOOL bInitialized = FALSE;
 BOOL bSuspended = FALSE;
 DWORD maxDelay = DEFAULT_MAX_DELAY ;
 FILETIME nextRunDate = { 0, 0 };
+#ifdef GWA
 HANDLE ThreadTrigger = NULL;
 DWORD ServiceId = 0;
 DWORD TriggerId = 0;
 
 // Only one thread can try to run an inventory at a time
 CRITICAL_SECTION InventoryThreadRunning;
+#endif
 
 // local functions
 static LPSTR computeDeviceID(void);
@@ -113,7 +115,11 @@ static DWORD WINAPI _lpStartTriggerThread(LPVOID lpParameter)
 {
 	while (1) {
 		// Sleep at least one second before try to run
-		Sleep(DEFAULT_MINIMAL_SLEEP>1000 ? DEFAULT_MINIMAL_SLEEP*1000 : 1000);
+#ifdef DEBUG
+		Debug2("Sleeping %d ms", DEFAULT_MINIMAL_SLEEP);
+#endif
+		Sleep(DEFAULT_MINIMAL_SLEEP);
+
 		Run(FALSE);
 	}
 
@@ -135,12 +141,16 @@ void Start(void)
 		InitializeCriticalSection(&InventoryThreadRunning);
 
 		ServiceId = GetCurrentThreadId();
+#ifdef DEBUG
 		Debug( "Starting Trigger thread (tid=%d)", ServiceId );
+#endif
 
 		ThreadTrigger = CreateThread( NULL, 0,
 			_lpStartTriggerThread, &ServiceId, 0, &TriggerId);
-		CeSetThreadPriority( ThreadTrigger, THREAD_PRIORITY_IDLE );
+		//CeSetThreadPriority( ThreadTrigger, THREAD_PRIORITY_IDLE );
+#ifdef DEBUG
 		Debug( "Trigger thread started (tid=%d)", TriggerId );
+#endif
 		bSuspended = FALSE;
 	}
 #endif
@@ -156,26 +166,27 @@ void Run(BOOL force)
 		return;
 	}
 
-	// Write local inventory if desired
-	if (conf.local != NULL && strlen(conf.local))
+	// While not forced, check if it's time to submit
+	if (force || timeToSubmit())
 	{
-		Log( "Running inventory..." );
-		RunInventory();
-
-		TargetInit(DeviceID);
-
-		Log( "Saving to file as local target..." );
-		WriteLocal(DeviceID);
-	}
-
-	// Send inventory if desired
-	if (conf.server != NULL && strlen(conf.server))
-	{
-		// While not forced, check if it's time to submit
-		if (force || timeToSubmit())
+		// Write local inventory if desired
+		if (conf.local != NULL && strlen(conf.local))
 		{
-			Log( "Submitting to remote target..." );
+			Log( "Running inventory..." );
+			RunInventory();
 
+			TargetInit(DeviceID);
+
+			Log( "Saving to file as local target..." );
+			WriteLocal(DeviceID);
+
+			// Always set new run date if requesting local inventory
+			computeNextRunDate();
+		}
+
+		// Send inventory if desired
+		if (conf.server != NULL && strlen(conf.server))
+		{
 			// Only run inventory if still not done, as local inventory
 			if (getInventory() == NULL)
 			{
@@ -185,17 +196,19 @@ void Run(BOOL force)
 				TargetInit(DeviceID);
 			}
 
+			Log( "Submitting to remote target..." );
 			if (SendRemote(DeviceID))
 			{
+				// But only reset next run date while submission failed
 				computeNextRunDate();
 			}
 		}
+
+		TargetQuit();
+		FreeInventory();
+
+		Log( "Run finished" );
 	}
-
-	TargetQuit();
-	FreeInventory();
-
-	Log( "Run finished" );
 
 	LeaveCriticalSection(&InventoryThreadRunning);
 }

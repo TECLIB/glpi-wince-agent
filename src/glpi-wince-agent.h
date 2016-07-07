@@ -54,8 +54,8 @@
 #define DEFAULT_MAX_DELAY        4*60
 #define DEFAULT_INITIAL_DELAY    10
 
-// Define minimal wait time in seconds between checks if time to run
-#define DEFAULT_MINIMAL_SLEEP    60
+// Define minimal wait time in milli-seconds between checks if time to run
+#define DEFAULT_MINIMAL_SLEEP    60000
 
 // Define GLPI connection timeout in milliseconds
 #define GLPI_CONNECT_TIMEOUT     1000

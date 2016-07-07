@@ -211,6 +211,8 @@ BOOL GWA_IOControl( DWORD dwData, DWORD dwCode, PBYTE pBufIn,
 				{
 					Log("Looking to run inventory...");
 					Run(FALSE);
+					// Finally check to resume trigger thread
+					Resume();
 				}
 			}
 			else
