@@ -472,9 +472,9 @@ static BOOL SendToServer(LPSTR deviceid, LPGLPISERVER glpi)
 	ulOption  = GLPI_CONNECT_TIMEOUT ;
 	if (InternetSetOption(hOpen, dwOptions, (LPVOID)&ulOption, sizeof(ulOption)))
 	{
-		Debug("Internet connection time-out set to %ulms", ulOption);
+		Debug("Internet connection time-out set to %ums", ulOption);
 	} else {
-		Error("Can't set internet connection time-out set to %ulms", ulOption);
+		Error("Can't set internet connection time-out set to %ums", ulOption);
 	}
 
 	// Get internet session

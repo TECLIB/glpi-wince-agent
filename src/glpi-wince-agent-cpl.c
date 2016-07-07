@@ -403,7 +403,7 @@ CPlApplet(HWND hwndCPL, UINT dwReason, LPARAM lParam1, LPARAM lParam2)
 			// determined by the value returned from CPL_GETCOUNT.
 			// lParam1 is the 0-based index of the dialog box.
 			// lParam2 is a pointer to the NEWCPLINFO structure.
-			_debug("CPlApplet: newinquire, %ul", lParam1);
+			_debug("CPlApplet: newinquire, %u", lParam1);
 			ASSERT(0 == lParam1);
 			ASSERT(lParam2);
 
