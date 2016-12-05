@@ -11,7 +11,7 @@ GLPI with FusionInventory plugin server:
 
 ## Building the agent
 To build the agent you will need a full cross-building toolchain for wince. We
-used cegcc/mingw32ce based on GCC v4.6.3 and published by @MaxKerllermann for
+used cegcc/mingw32ce based on GCC v4.6.3 and published by [Max Kerllermann](https://github.com/MaxKellermann) for
 the [XCSoar project](https://github.com/XCSoar/XCSoar) needs.
 
 The toolchain is available from: http://max.kellermann.name/projects/cegcc/
