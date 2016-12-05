@@ -29,10 +29,10 @@ To build the agent, you need the following tool in your environment:
 Before building the cab installer, you may want to update the src/Makefile.local
 with your GLPI server URL so it is defined during installation.
 
-To build the installer, just start in 
-  make cab
+To build the installer, just start:
+ - make cab
 
-This will also download and install lcab and cabwiz tools from launchpad and github.
+This will also download and install [lcab](https://launchpad.net/lcab) and [cabwiz](https://github.com/Turbo87/cabwiz) tools from launchpad and github.
 
 ## Generated inventory samples
  * HTC Win-CE based Phone:
