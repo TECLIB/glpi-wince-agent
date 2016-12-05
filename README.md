@@ -1,11 +1,35 @@
 # Very light GLPI agent for Windows CE
 
-It will try to retreive the following informations and send them back to GLPI
-server:
+The agent will try to retreive the following informations and send them back to
+GLPI with FusionInventory plugin server:
  - device name
+ - device hardware and model
+ - device operating system version
  - device serial number
  - device MAC address
  - device IP
+
+## Building the agent
+To build the agent you will need a full cross-building toolchain for wince. We
+used cegcc/mingw32ce based on GCC v4.6.3 and published by @MaxKerllermann for
+the [XCSoar project](https://github.com/XCSoar/XCSoar) needs.
+
+The toolchain is available from: http://max.kellermann.name/projects/cegcc/
+
+To build the agent, you need the following tool in your environment:
+ - arm-mingw32ce-gcc
+ - arm-mingw32ce-cpp
+ - arm-mingw32ce-windres
+ - arm-mingw32ce-strip
+
+## Building the cab installer
+Before building the cab installer, you may want to update the src/Makefile.local
+with your GLPI server URL so it is defined during installation.
+
+To build the installer, just start in 
+  make cab
+
+This will also download and install lcab and cabwiz tools from launchpad and github.
 
 ## Test with Wine
 As explain on [MSDN](https://msdn.microsoft.com/en-us/library/aa462416.aspx), Microsoft
