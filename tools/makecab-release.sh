@@ -14,7 +14,7 @@ set -e
 cd "${0%/*}/.."
 
 LCAB_URL="https://launchpad.net/ubuntu/+archive/primary/+files/lcab_1.0b12.orig.tar.gz"
-CABWIZ_URL="https://github.com/Turbo87/cabwiz/archive/master.zip"
+CABWIZ_URL="https://github.com/nakomis/cabwiz/archive/master.zip"
 
 # Check we have lcab built under tools folder
 if [ ! -x tools/lcab ]; then
@@ -49,19 +49,27 @@ sed -e "s/^AgentVersion = .*/AgentVersion = \"$MAJOR.$MINOR\"/" \
 
 if [ "$UPX" -ne 0 -a -x "$( which upx 2>/dev/null )" ]; then
 	upx --compress-icons=0 --best src/glpi-wince-agent.exe
-	#upx --compress-icons=0 --best src/glpi-wince-agent-cpl.dll
+	[ -e src/glpi-wince-agent-cpl.dll ] && upx --compress-icons=0 --best src/glpi-wince-agent-cpl.dll
 	upx --best src/glpi-wince-agent-setup.dll
 	upx --best src/glpi-wince-agent-service.dll
 fi
+
+# Install built files under build folder with installation name
+rm -rf build
+mkdir build
+mv src/glpi-wince-agent-service.dll build/glpi-agent.dll
+mv src/glpi-wince-agent-setup.dll build/setup.dll
+mv src/glpi-wince-agent.exe build/glpi-agent.exe
+[ -e src/glpi-wince-agent-cpl.dll ] && mv src/glpi-wince-agent-cpl.dll build/glpi-agent.cpl
 
 # Generate cab
 tools/cabwiz glpi-wince-agent.inf /v
 
 # Rename produced CAB file
 if (( TEST )); then
-	mv -vf GLPI-Agent.CAB glpi-agent-test-v$MAJOR.$MINOR.cab
+	mv -vf GLPI-Agent.cab glpi-agent-test-v$MAJOR.$MINOR.cab
 else
-	mv -vf GLPI-Agent.CAB glpi-agent-v$MAJOR.$MINOR.cab
+	mv -vf GLPI-Agent.cab glpi-agent-v$MAJOR.$MINOR.cab
 fi
 
 # Cleanup

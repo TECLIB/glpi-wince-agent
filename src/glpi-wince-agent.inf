@@ -20,19 +20,19 @@ VersionMax = 32767.0
 BuildMax = 0xE0000000
 
 [SourceDisksNames]
-1 = ,"Sources",,src
+1 = ,"Sources",,build
 
 [SourceDisksFiles]
-glpi-wince-agent.exe = 1
-;glpi-wince-agent-cpl.dll = 1
-glpi-wince-agent-service.dll = 1
-glpi-wince-agent-setup.dll = 1
+glpi-agent.exe = 1
+;glpi-agent.cpl = 1
+glpi-agent.dll = 1
+setup.dll = 1
 
 [DefaultInstall]
 CopyFiles = AgentFile,AgentService ;,CplAgentFile
 CEShortcuts = Links
 AddReg = AddRegistry
-CESetupDLL=glpi-wince-agent-setup.dll
+CESetupDLL = setup.dll
 
 [DestinationDirs]
 ; See https://msdn.microsoft.com/en-us/library/ee504636.aspx for %CEXY%
@@ -43,13 +43,13 @@ AgentFile = 0, %InstallDir%
 Links = 0, %CE11% ; "\Windows\Start Menu" directory
 
 ;[CplAgentFile]
-;glpi-wince-agent-cpl.dll,glpi-agent.cpl,,0x00000002
+;glpi-agent.cpl,glpi-agent.cpl,,0x00000002
 
 [AgentFile]
-glpi-wince-agent.exe,glpi-agent.exe,,0x00000002
+glpi-agent.exe,glpi-agent.exe,,0x00000002
 
 [AgentService]
-glpi-wince-agent-service.dll,glpi-agent.dll,,0x00000002
+glpi-agent.dll,glpi-agent.dll,,0x00000002
 
 [AddRegistry]
 HKLM,\Software\Teclib\GLPI-Agent,InstallDir,0x00000000,%InstallDir%
@@ -58,4 +58,4 @@ HKLM,\Software\Teclib\GLPI-Agent,KeepFiles,0x00010001,0
 
 [Links]
 ; shortcut to a file, created in the standard destination path %CE11% (/Windows/Start Menu/)
-%LinkFilename%,0,"glpi-wince-agent.exe",%CE11%
+%LinkFilename%,0,"glpi-agent.exe",%CE11%

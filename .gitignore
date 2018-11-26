@@ -12,3 +12,4 @@ lcab
 cabwiz
 *.py
 *.pyc
+build/

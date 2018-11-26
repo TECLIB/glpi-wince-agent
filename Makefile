@@ -22,6 +22,9 @@ tools:
 clean:
 	@$(MAKE) -w -C src clean
 
+mrproper: clean
+	@rm -vf tools/{lcab,cabwiz,*.py,*.pyc} cabwiz.zip lcab*.tar.gz
+
 cpl:
 	@$(MAKE) -w -C src glpi-wince-agent-cpl.dll
 
