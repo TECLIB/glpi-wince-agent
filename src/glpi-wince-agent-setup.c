@@ -306,6 +306,8 @@ Install_Init(HWND hwndparent, BOOL bFirstcall, BOOL IsInstalled,
 #endif
 	}
 
+	Log("Current OS %d.%d (build %d)", os.dwMajorVersion, os.dwMinorVersion, os.dwBuildNumber);
+
 	if (IsInstalled)
 	{
 		keepFiles = 1;
