@@ -168,6 +168,51 @@ static void setupMainPanel(HWND hWnd)
 	}
 }
 
+static void adjustEditControl(int res, LONG width)
+{
+	HWND edittext;
+	RECT size;
+
+	if (dialog == NULL)
+		return;
+
+	edittext = GetDlgItem(dialog, res);
+	if (edittext)
+	{
+		if (GetWindowRect(edittext, &size))
+		{
+#ifdef DEBUG
+			Debug2("EditText windows size(%d): %dx%d@%d+%d", res, size.right, size.bottom, size.left, size.top);
+#endif
+			// Resize control
+			SetWindowPos(edittext, dialog, 0, 0, width - 2*size.left, size.bottom - size.top, SWP_NOMOVE|SWP_NOZORDER|SWP_SHOWWINDOW);
+		}
+	}
+
+}
+
+static void adjustDialogControls(HWND hWnd)
+{
+	RECT size;
+
+	if (dialog == NULL)
+		return;
+
+#ifdef DEBUG
+	Debug2("Adjusting control sizes...");
+#endif
+
+	if (GetClientRect(hWnd, &size) && size.right > 10)
+	{
+#ifdef DEBUG
+		Debug2("Dialog size: %dx%d", size.right, size.bottom);
+#endif
+		adjustEditControl(IDC_EDIT_URL  , size.right);
+		adjustEditControl(IDC_EDIT_LOCAL, size.right);
+		adjustEditControl(IDC_EDIT_TAG  , size.right);
+	}
+}
+
 LRESULT CALLBACK WndProcedure(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 {
 	switch (Msg) {
@@ -175,6 +220,9 @@ LRESULT CALLBACK WndProcedure(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 			setupMainPanel(hWnd);
 			break;
 		case WM_SHOWWINDOW:
+			break;
+		case WM_SIZE:
+			adjustDialogControls(hWnd);
 			break;
 		case WM_CLOSE:
 			DestroyWindow(hWnd);
