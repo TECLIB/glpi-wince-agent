@@ -14,8 +14,8 @@ AgentVersion = "__VERSION__"
 
 [CEDevice]
 ProcessorType=2577 ; PROCESSOR_STRONGARM
-VersionMin = 5.0
-VersionMax = 32767.0
+VersionMin = 4.21
+VersionMax = 8.0
 ; prevent warnings on screen resolution
 BuildMax = 0xE0000000
 
