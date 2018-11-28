@@ -81,7 +81,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int 
 			wClassName, wAgentName,
 			WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
 			CW_USEDEFAULT, CW_USEDEFAULT,
-			240, 240,
+			CW_USEDEFAULT, CW_USEDEFAULT,
 			NULL, NULL,
 			hInstance,
 			NULL);
