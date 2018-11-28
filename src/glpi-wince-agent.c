@@ -113,69 +113,29 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int 
 	return Msg.wParam;
 }
 
-static BOOL DoConfigDebug(INT what, HWND dialog)
-{
-	LPARAM wIndex;
-
-	switch (what) {
-		case CBN_SELCHANGE:
-#ifdef DEBUG
-			Log("Got Debug CBN_SELCHANGE");
-#endif
-			wIndex = SendDlgItemMessage(dialog, IDC_DEBUG_CONFIG, CB_GETCURSEL, 0, 0 );
-#ifdef DEBUG
-			Log("Debug level to be set to %i", wIndex);
-#endif
-			conf.debug = wIndex;
-			return TRUE;
-	}
-	return FALSE;
-}
-
-static BOOL DoDialogActions(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
-{
-	switch (Msg) {
-		case WM_COMMAND:
-#ifdef DEBUG
-			Log("Got Dialog WM_COMMAND: %d -> %d", LOWORD(wParam), HIWORD(wParam));
-#endif
-			switch (LOWORD(wParam)) {
-				case IDC_DEBUG_CONFIG:
-					return DoConfigDebug(HIWORD(wParam), hWnd);
-					break;
-			}
-		break;
-	}
-	return FALSE;
-}
-
 static void setupMainPanel(HWND hWnd)
 {
-	HWND combo;
-	CHAR value[16];
 	LPWSTR buffer = NULL;
-	int i, len;
+	int len;
 
 #ifdef DEBUG
 			Debug2("Setting up panel...");
 #endif
 
 	bar = CommandBar_Create(hi, hWnd, 1);
-	CommandBar_AddAdornments(bar, CMDBAR_OK, 0);
 	CommandBar_InsertMenubarEx(bar, hi, MAKEINTRESOURCE(IDR_MAINMENU), 0);
+	CommandBar_AddAdornments(bar, CMDBAR_OK, 0);
 
-	dialog = CreateDialog(hi,MAKEINTRESOURCE(IDR_MAINDIALOG), hWnd, DoDialogActions);
-	combo = GetDlgItem(dialog, IDC_DEBUG_CONFIG);
+	dialog = CreateDialog(hi,MAKEINTRESOURCE(IDR_MAINDIALOG), hWnd, NULL);
 
-	// Setup Debug Level Combo
-	for ( i=0 ; i <= 2 ; i++ )
-	{
-		sprintf( value, "%d", i );
-		(void)ComboBox_AddString(combo, value);
+	// Initialize rabiobox with current debug level
+	if (conf.debug == 2) {
+		CheckRadioButton(dialog, IDC_DEBUG0, IDC_DEBUG2, IDC_DEBUG2);
+	} else if (conf.debug == 1) {
+		CheckRadioButton(dialog, IDC_DEBUG0, IDC_DEBUG2, IDC_DEBUG1);
+	} else {
+		CheckRadioButton(dialog, IDC_DEBUG0, IDC_DEBUG2, IDC_DEBUG0);
 	}
-
-	// Initialize combo with current debug level
-	SendDlgItemMessage(dialog, IDC_DEBUG_CONFIG, CB_SETCURSEL, conf.debug, 0 );
 
 	// Initialize server editbox
 	len = conf.server ? strlen(conf.server) : 0 ;
@@ -299,6 +259,17 @@ static void keepConfig(void)
 		{
 			conf.tag = NULL;
 		}
+	}
+
+	if (SendDlgItemMessage(dialog, IDC_DEBUG2, BM_GETCHECK, 0, 0 ) == BST_CHECKED) {
+		Debug("Updating debug config to debug2");
+		conf.debug = 2;
+	} else if (SendDlgItemMessage(dialog, IDC_DEBUG1, BM_GETCHECK, 0, 0 ) == BST_CHECKED) {
+		Debug("Updating debug config to debug1");
+		conf.debug = 1;
+	} else {
+		Debug("Updating debug config to no debug");
+		conf.debug = 0;
 	}
 }
 

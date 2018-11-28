@@ -42,8 +42,10 @@
 
 #define IDC_EDIT_URL			1001
 #define IDC_EDIT_LOCAL			1002
-#define IDC_DEBUG_CONFIG		1003
 #define IDC_EDIT_TAG			1004
+#define IDC_DEBUG0				1010
+#define IDC_DEBUG1				1011
+#define IDC_DEBUG2				1012
 
 #define IDC_STATIC (-1)
 
