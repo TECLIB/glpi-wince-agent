@@ -325,6 +325,9 @@ void DoMenuActions(HWND w, INT id)
 {
 	switch (id) {
 		case IDOK:
+			keepConfig();
+			ConfigSave();
+			Refresh(); // Ask service to refresh its configuration
 			RequestRun();
 			Quit();
 			PostQuitMessage(WM_QUIT);
@@ -339,7 +342,7 @@ void DoMenuActions(HWND w, INT id)
 		case IDM_MENU_SAVECONFIG:
 			keepConfig();
 			ConfigSave();
-			Refresh(); // Ask service to refresh the con
+			Refresh(); // Ask service to refresh its configuration
 			break;
 #ifdef DEBUG
 		case IDM_MENU_DEBUGINVENTORY:
