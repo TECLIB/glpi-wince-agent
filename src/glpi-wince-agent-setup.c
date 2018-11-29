@@ -52,7 +52,7 @@ DECLSPEC_EXPORT APIENTRY BOOL
 DllMain(HANDLE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved);
 
 FILE *hFile = NULL;
-LPCSTR cstrInstallJournal = "\\Windows\\" APPNAME "-install.txt";
+LPCSTR cstrInstallJournal = APPNAME "-install.txt";
 DWORD keepFiles = 0;
 
 #define SHORT_BUFFER_SIZE 16
@@ -281,6 +281,12 @@ Install_Init(HWND hwndparent, BOOL bFirstcall, BOOL IsInstalled,
              LPCTSTR pszinstalldir)
 {
 	HKEY hKey = NULL;
+	LPSTR logpath = NULL;
+
+	logpath = malloc(MAX_PATH);
+	wcstombs(logpath, pszinstalldir, MAX_PATH);
+	strcat(logpath, "\\");
+	strcat(logpath, cstrInstallJournal);
 
 	// Initializes OS informations
 	os.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
@@ -297,7 +303,7 @@ Install_Init(HWND hwndparent, BOOL bFirstcall, BOOL IsInstalled,
 		if (hFile != NULL)
 		{
 			fclose(hFile);
-			hFile = freopen( cstrInstallJournal, "w", stdout );
+			hFile = freopen( logpath, "w", stdout );
 		}
 
 #ifdef TEST
@@ -361,6 +367,8 @@ Install_Init(HWND hwndparent, BOOL bFirstcall, BOOL IsInstalled,
 	{
 		Log("Installing " APPNAME " v" VERSION "...");
 	}
+
+	free(logpath);
 
 	return codeINSTALL_INIT_CONTINUE;
 }
@@ -493,8 +501,6 @@ Install_Exit(HWND hwndparent, LPCTSTR pszinstalldir, WORD cfaileddirs,
 		Log("Can't try to set VarDir in registry");
 		DumpError();
 	}
-	free(wPath);
-	free(path);
 
 	// TODO: Update DLLs file attributes as protected system file
 
@@ -637,12 +643,13 @@ Install_Exit(HWND hwndparent, LPCTSTR pszinstalldir, WORD cfaileddirs,
 
 			// Set Dll in registry
 			dwType = REG_SZ;
-			wData = L"glpi-agent.dll";
-			dwDataSize = sizeof(TCHAR)*(wcslen(wData)+1);
+			swprintf(wPath, L"%s%hs", pszinstalldir, "\\glpi-agent.dll");
+			dwDataSize = sizeof(TCHAR)*(wcslen(wPath)+1);
 			if (RegSetValueEx(hKey, L"Dll", 0, dwType,
-							(LPBYTE)wData, dwDataSize) == ERROR_SUCCESS)
+							(LPBYTE)wPath, dwDataSize) == ERROR_SUCCESS)
 			{
-				Log("Service Dll set in registry");
+				wcstombs(path, wPath, MAX_PATH);
+				Log("Service Dll set in registry to '%s'", path);
 			}
 			else
 			{
@@ -799,6 +806,9 @@ Install_Exit(HWND hwndparent, LPCTSTR pszinstalldir, WORD cfaileddirs,
 	Log("Dumping registry while service installed...");
 	DebugRegistry();
 #endif
+
+	free(wPath);
+	free(path);
 
 	return codeINSTALL_EXIT_DONE;
 }
@@ -988,6 +998,9 @@ BOOL APIENTRY
 DllMain(HANDLE hModule, DWORD dwReason, LPVOID lpReserved)
 {
 	LPCSTR hdr = APPNAME "-Setup (Built: " __DATE__ ", " __TIME__ ")";
+#ifndef TEST
+	LPTSTR wPath = NULL;
+#endif
 
 	if (hFile == NULL)
 	{
@@ -1015,6 +1028,13 @@ DllMain(HANDLE hModule, DWORD dwReason, LPVOID lpReserved)
 			Log("%s: unloading", hdr);
 			if (hFile != NULL)
 				fclose(hFile);
+#ifndef TEST
+			// Remove first cstrInstallJournal created file
+			wPath = malloc(2*MAX_PATH);
+			swprintf( wPath, L"\\%hs", cstrInstallJournal );
+			DeleteFile(wPath);
+			free(wPath);
+#endif
 			break;
 	}
 

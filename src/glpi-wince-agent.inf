@@ -37,7 +37,7 @@ CESetupDLL = setup.dll
 [DestinationDirs]
 ; See https://msdn.microsoft.com/en-us/library/ee504636.aspx for %CEXY%
 ; Or http://www.cabextract.org.uk/wince_cab_format/
-AgentService = 0, %CE2% ; \Windows
+AgentService = 0, %InstallDir%
 AgentFile = 0, %InstallDir%
 ;CplAgentFile = 0, %CE2% ; \Windows
 Links = 0, %CE11% ; "\Windows\Start Menu" directory
