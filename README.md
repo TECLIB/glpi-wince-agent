@@ -32,7 +32,10 @@ with your GLPI server URL so it is defined during installation.
 To build the installer, just start:
  - make cab
 
-This will also download and install [lcab](https://launchpad.net/lcab) and [cabwiz](https://github.com/Turbo87/cabwiz) tools from launchpad and github.
+This will eventually download and install [lcab](https://launchpad.net/lcab) and [cabwiz](https://github.com/nakomis/cabwiz) tools from launchpad and github.
+
+By the way, it also support to start `cabwiz.exe` using [Wine](https://www.winehq.org/). For this you need to copy `cabwiz.exe`, `cabwiz.ddf` and `makecab.exe` from a Visual Studio Legacy install to the `tools` folder.
+If such tools is found and Wine is installed on your system, lcab & cabwiz won't be downloaded.
 
 ## Generated inventory samples
  * HTC Win-CE based Phone:

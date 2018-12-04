@@ -10,6 +10,9 @@ env.sh
 *.zip
 lcab
 cabwiz
+cabwiz.exe
+cabwiz.ddf
+makecab.exe
 *.py
 *.pyc
 build/

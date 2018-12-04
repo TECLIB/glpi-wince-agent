@@ -1,10 +1,11 @@
 #! /bin/bash
 
-let TEST=0 UPX=0
+let TEST=0 UPX=0 LCAB=0
 while [ -n "$1" ]
 do
 	[ "$1" == "--test" ] && let TEST++
 	[ "$1" == "--upx" ]  && let UPX++
+	[ "$1" == "--lcab" ] && let LCAB++
 	shift
 done
 
@@ -17,7 +18,7 @@ LCAB_URL="https://launchpad.net/ubuntu/+archive/primary/+files/lcab_1.0b12.orig.
 CABWIZ_URL="https://github.com/nakomis/cabwiz/archive/master.zip"
 
 # Check we have lcab built under tools folder
-if [ ! -x tools/lcab ]; then
+if [ $LCAB -gt 0 -a ! -x tools/lcab ]; then
 	SRCS="${LCAB_URL##*/}"
 	if [ ! -d lcab ]; then
 		[ -e "$SRCS" ] || wget -nd "$LCAB_URL"
@@ -33,12 +34,12 @@ if [ ! -x tools/lcab ]; then
 fi
 
 # Check we have cabwiz replacement tool under tools folder
-if [ ! -x tools/cabwiz ]; then
+if [ $LCAB -gt 0 -a ! -x tools/cabwiz ]; then
 	[ -e cabwiz.zip ] || wget -O cabwiz.zip "$CABWIZ_URL"
 	unzip -ju cabwiz.zip -x cabwiz-master/{.gitignore,LICENSE,README.md} -d tools
 fi
 
-export PATH=$PATH:./tools
+export PATH=$PATH:../tools
 
 read define major_string MAJOR <<<$( egrep '^#define MAJOR_VERSION' src/glpi-wince-agent.h )
 read define minor_string MINOR <<<$( egrep '^#define MINOR_VERSION' src/glpi-wince-agent.h )
@@ -53,22 +54,40 @@ fi
 # Install built files under build folder with installation name
 rm -rf build
 mkdir build
-mv src/glpi-wince-agent-service.dll build/glpi-agent.dll
-mv src/glpi-wince-agent-setup.dll build/setup.dll
-mv src/glpi-wince-agent.exe build/glpi-agent.exe
-[ -e src/glpi-wince-agent-cpl.dll ] && mv src/glpi-wince-agent-cpl.dll build/glpi-agent.cpl
+cp -a src/glpi-wince-agent-service.dll build/glpi-agent.dll
+cp -a src/glpi-wince-agent-setup.dll build/setup.dll
+cp -a src/glpi-wince-agent.exe build/glpi-agent.exe
+[ -e src/glpi-wince-agent-cpl.dll ] && cp -a src/glpi-wince-agent-cpl.dll build/glpi-agent.cpl
 
 # Update inf file
 sed -e "s/^AgentVersion = .*/AgentVersion = \"$MAJOR.$MINOR\"/" \
 	src/glpi-wince-agent.inf >build/glpi-wince-agent.inf
 
-
 # Generate cab
-tools/cabwiz build/glpi-wince-agent.inf /v
-if [ ! -e GLPI-Agent.cab ]; then
-	echo "Failed to generate CAB file" >&2
-	exit 1
+: ${WINE:=$( type -p wine )}
+cd build
+if [ $LCAB -eq 0 -a -e ../tools/cabwiz.exe -a -n "$WINE" ]; then
+	if [ ! -e ../tools/cabwiz.ddf ]; then
+		echo "You should also install cabwiz.ddf file in tools folder" >&2
+	fi
+	if [ ! -e ../tools/makecab.exe ]; then
+		echo "You should also install makecab.exe file in tools folder" >&2
+	fi
+	$WINE ../tools/cabwiz.exe glpi-wince-agent.inf /compress
+	if [ ! -e glpi-wince-agent.CAB ]; then
+		echo "Failed to generate CAB file" >&2
+		exit 1
+	fi
+	mv -f glpi-wince-agent.CAB ../GLPI-Agent.cab
+else
+	# Try
+	cabwiz glpi-wince-agent.inf /dest .. /v
+	if [ ! -e ../GLPI-Agent.cab ]; then
+		echo "Failed to generate CAB file" >&2
+		exit 1
+	fi
 fi
+cd ..
 
 # Rename produced CAB file
 if (( TEST )); then
