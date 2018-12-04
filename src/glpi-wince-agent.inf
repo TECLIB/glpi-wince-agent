@@ -46,10 +46,10 @@ Links = 0, %CE11% ; "\Windows\Start Menu" directory
 ;glpi-agent.cpl,glpi-agent.cpl,,0x00000002
 
 [AgentFile]
-glpi-agent.exe,glpi-agent.exe,,0x00000002
+glpi-agent.exe,glpi-agent.exe,,0x40000002
 
 [AgentService]
-glpi-agent.dll,glpi-agent.dll,,0x00000002
+glpi-agent.dll,glpi-agent.dll,,0x40000002
 
 [AddRegistry]
 HKLM,\Software\Teclib\GLPI-Agent,InstallDir,0x00000000,%InstallDir%
