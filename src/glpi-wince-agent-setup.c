@@ -502,8 +502,6 @@ Install_Exit(HWND hwndparent, LPCTSTR pszinstalldir, WORD cfaileddirs,
 		DumpError();
 	}
 
-	// TODO: Update DLLs file attributes as protected system file
-
 	/*
 	 * Setup registry from setup DLL
 	 */
@@ -889,7 +887,7 @@ Uninstall_Init(HWND hwndparent, LPCTSTR pszinstalldir)
 
 	if (OpenedKey(HKEY_LOCAL_MACHINE, L"\\Services", &hKey))
 	{
-		// TODO: Does not work on some devices. Btw this is not critical.
+		// Does not work on some devices. Btw this is not critical.
 		if (RegDeleteKey(hKey, WAPPNAME) != ERROR_SUCCESS)
 		{
 			Log("Failure while removing service base registry key");
