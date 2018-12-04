@@ -53,6 +53,9 @@ DllMain(HANDLE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved);
 
 FILE *hFile = NULL;
 LPCSTR cstrInstallJournal = APPNAME "-install.txt";
+LPCSTR DefaultConfigFile  = APPNAME "-config.txt";
+LPTSTR wInstalldir = NULL;
+LPTSTR wVardir = NULL;
 DWORD keepFiles = 0;
 
 #define SHORT_BUFFER_SIZE 16
@@ -821,7 +824,6 @@ Uninstall_Init(HWND hwndparent, LPCTSTR pszinstalldir)
 	LPSTR installdir = NULL;
 	int length = 0;
 	HKEY hKey = NULL;
-	DWORD EditorSubKeys = 0, EditorValues = 0;
 
 	// Initializes OS informations
 	os.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
@@ -837,6 +839,29 @@ Uninstall_Init(HWND hwndparent, LPCTSTR pszinstalldir)
 	wcstombs(installdir, pszinstalldir, length);
 	Log("Uninstalling " APPNAME " v" VERSION ": PATH=%s", installdir);
 	free(installdir);
+
+	// Keep installdir & vardir for cleanup while leaving uninstall
+	if (OpenedKey(HKEY_LOCAL_MACHINE, L"\\Software\\"EDITOR"\\"APPNAME, &hKey))
+	{
+		DWORD dwType = REG_SZ;
+		DWORD dwDataSize = 2*MAX_PATH;
+		wInstalldir = malloc(dwDataSize);
+		if (!RegQueryValueEx(hKey, L"Installdir", NULL, &dwType,
+		                    (LPBYTE)wInstalldir, &dwDataSize) == ERROR_SUCCESS)
+		{
+			Log("Can't get " APPNAME " install directory");
+			DumpError();
+		}
+		dwDataSize = 2*MAX_PATH;
+		wVardir = malloc(dwDataSize);
+		if (!RegQueryValueEx(hKey, L"VarDir", NULL, &dwType,
+		                    (LPBYTE)wVardir, &dwDataSize) == ERROR_SUCCESS)
+		{
+			Log("Can't get " APPNAME " var directory");
+			DumpError();
+		}
+		RegCloseKey(hKey);
+	}
 
 #ifdef TEST
 	Log("Dumping registry before disabling service...");
@@ -897,7 +922,7 @@ Uninstall_Init(HWND hwndparent, LPCTSTR pszinstalldir)
 		Log(APPNAME " service removed");
 	}
 
-	// Delete application registry keys
+	// Checking application registry keys
 	if (OpenedKey(HKEY_LOCAL_MACHINE, L"\\Software\\"EDITOR"\\"APPNAME, &hKey))
 	{
 		// Check first if we are requested to keep files
@@ -923,6 +948,33 @@ Uninstall_Init(HWND hwndparent, LPCTSTR pszinstalldir)
 				keepFiles = 0;
 			}
 		}
+		RegCloseKey(hKey);
+	}
+
+	if (keepFiles)
+	{
+		Log("Will keep " APPNAME " related files");
+	}
+	else
+	{
+		Log("Have to delete " APPNAME " related files");
+	}
+
+	return codeUNINSTALL_INIT_CONTINUE;
+}
+
+/**
+ * Handles tasks done at end of uninstallation
+ */
+codeUNINSTALL_EXIT
+Uninstall_Exit(HWND hwndparent)
+{
+	HKEY hKey = NULL;
+	DWORD EditorSubKeys = 0, EditorValues = 0;
+
+	// Delete application registry keys
+	if (OpenedKey(HKEY_LOCAL_MACHINE, L"\\Software\\"EDITOR"\\"APPNAME, &hKey))
+	{
 		Log("Removing " APPNAME " install values...");
 		RegDeleteValue(hKey, L"InstallDir");
 		RegDeleteValue(hKey, L"VarDir");
@@ -956,31 +1008,87 @@ Uninstall_Init(HWND hwndparent, LPCTSTR pszinstalldir)
 
 	if (keepFiles)
 	{
-		Log("Will keep " APPNAME " related files");
-	}
-	else
-	{
-		Log("Have to delete " APPNAME " related files");
-	}
-
-	return codeUNINSTALL_INIT_CONTINUE;
-}
-
-/**
- * Handles tasks done at end of uninstallation
- */
-codeUNINSTALL_EXIT
-Uninstall_Exit(HWND hwndparent)
-{
-	if (keepFiles)
-	{
 		Log("Keeping " APPNAME " related files");
 	}
+	else if (!wInstalldir || !wcslen(wInstalldir)) {
+		Log("Can't delete" APPNAME " related files without installation directory");
+	}
 	else
 	{
-		Log("TODO: Deleting " APPNAME " related files and folders");
-		// TODO clean-up related folders
+		LPTSTR wPath = NULL;
+		LPSTR path = NULL;
+		wPath = malloc(2*MAX_PATH);
+		path = malloc(MAX_PATH);
+		Log("Deleting " APPNAME " related files and folders");
+		if (!wVardir || !wcslen(wVardir)) {
+			Log("Can't delete" APPNAME " some related files without var directory");
+		}
+		else
+		{
+#ifndef TEST
+			swprintf(wPath, L"%s\\%hs", wVardir, JOURNALBASENAME);
+#else
+			swprintf(wPath, L"%hs", JOURNALBASENAME);
+#endif
+			if (!DeleteFile(wPath))
+			{
+				wcstombs(path, wPath, MAX_PATH);
+				Log("Failed to delete '%s'", path);
+				DumpError();
+			}
+#ifndef TEST
+			swprintf(wPath, L"%s\\%hs", wVardir, INTERFACEBASENAME);
+#else
+			swprintf(wPath, L"%hs", INTERFACEBASENAME);
+#endif
+			if (!DeleteFile(wPath))
+			{
+				wcstombs(path, wPath, MAX_PATH);
+				Log("Failed to delete '%s'", path);
+				DumpError();
+			}
+			swprintf(wPath, L"%s\\%hs", wVardir, DefaultConfigFile);
+			if (!DeleteFile(wPath))
+			{
+				wcstombs(path, wPath, MAX_PATH);
+				Log("Failed to delete '%s'", path);
+				DumpError();
+			}
+			swprintf(wPath, L"%s\\%hs.dump", wVardir, APPNAME);
+			if (!DeleteFile(wPath))
+			{
+				wcstombs(path, wPath, MAX_PATH);
+				Log("Failed to delete '%s'", path);
+				DumpError();
+			}
+			if (!RemoveDirectory(wVardir))
+			{
+				wcstombs(path, wVardir, MAX_PATH);
+				Log("Failed to remove '%s' folder", path);
+				DumpError();
+			}
+		}
+		if (hFile != NULL)
+			fclose(hFile);
+		swprintf(wPath, L"%s\\%hs", wInstalldir, cstrInstallJournal);
+		if (!DeleteFile(wPath))
+		{
+			wcstombs(path, wPath, MAX_PATH);
+			Log("Failed to delete '%s\\%s'", path);
+			DumpError();
+		}
+		// Finish by wInstalldir as wVardir may be a sub-folder
+		if(!RemoveDirectory(wInstalldir))
+		{
+			wcstombs(path, wInstalldir, MAX_PATH);
+			Log("Failed to remove '%s' folder", path);
+			DumpError();
+		}
+		free(wPath);
+		free(path);
 	}
+	free(wVardir);
+	free(wInstalldir);
 
 	Log(APPNAME " uninstalled");
 
