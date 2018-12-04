@@ -43,10 +43,6 @@ export PATH=$PATH:./tools
 read define major_string MAJOR <<<$( egrep '^#define MAJOR_VERSION' src/glpi-wince-agent.h )
 read define minor_string MINOR <<<$( egrep '^#define MINOR_VERSION' src/glpi-wince-agent.h )
 
-# Update inf file
-sed -e "s/^AgentVersion = .*/AgentVersion = \"$MAJOR.$MINOR\"/" \
-	src/glpi-wince-agent.inf >glpi-wince-agent.inf
-
 if [ "$UPX" -ne 0 -a -x "$( which upx 2>/dev/null )" ]; then
 	upx --compress-icons=0 --best src/glpi-wince-agent.exe
 	[ -e src/glpi-wince-agent-cpl.dll ] && upx --compress-icons=0 --best src/glpi-wince-agent-cpl.dll
@@ -62,8 +58,17 @@ mv src/glpi-wince-agent-setup.dll build/setup.dll
 mv src/glpi-wince-agent.exe build/glpi-agent.exe
 [ -e src/glpi-wince-agent-cpl.dll ] && mv src/glpi-wince-agent-cpl.dll build/glpi-agent.cpl
 
+# Update inf file
+sed -e "s/^AgentVersion = .*/AgentVersion = \"$MAJOR.$MINOR\"/" \
+	src/glpi-wince-agent.inf >build/glpi-wince-agent.inf
+
+
 # Generate cab
-tools/cabwiz glpi-wince-agent.inf /v
+tools/cabwiz build/glpi-wince-agent.inf /v
+if [ ! -e GLPI-Agent.cab ]; then
+	echo "Failed to generate CAB file" >&2
+	exit 1
+fi
 
 # Rename produced CAB file
 if (( TEST )); then
@@ -71,6 +76,3 @@ if (( TEST )); then
 else
 	mv -vf GLPI-Agent.cab glpi-agent-v$MAJOR.$MINOR.cab
 fi
-
-# Cleanup
-rm -f glpi-wince-agent.inf
