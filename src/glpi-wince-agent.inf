@@ -20,7 +20,7 @@ VersionMax = 8.0
 BuildMax = 0xE0000000
 
 [SourceDisksNames]
-1 = ,"Sources",,.
+1 = ,"Sources",,build
 
 [SourceDisksFiles]
 glpi-agent.exe = 1
