@@ -286,7 +286,7 @@ Install_Init(HWND hwndparent, BOOL bFirstcall, BOOL IsInstalled,
 	HKEY hKey = NULL;
 	LPSTR logpath = NULL;
 
-	logpath = malloc(MAX_PATH+wcslen(cstrInstallJournal)+1);
+	logpath = malloc(MAX_PATH+strlen(cstrInstallJournal)+1);
 	wcstombs(logpath, pszinstalldir, MAX_PATH);
 	strcat(logpath, "\\");
 	strcat(logpath, cstrInstallJournal);
