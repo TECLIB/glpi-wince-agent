@@ -1104,13 +1104,17 @@ BOOL APIENTRY
 DllMain(HANDLE hModule, DWORD dwReason, LPVOID lpReserved)
 {
 	LPCSTR hdr = APPNAME "-Setup (Built: " __DATE__ ", " __TIME__ ")";
-#ifndef TEST
-	LPTSTR wPath = NULL;
-#endif
+	LPSTR templogpath = NULL;
+	LPTSTR wTempLogPath = NULL;
+
+	templogpath = malloc(strlen(cstrInstallJournal)+7);
+	sprintf( templogpath, "\\Temp\\%s", cstrInstallJournal );
+	wTempLogPath = malloc(2*(strlen(templogpath)+1));
+	swprintf( wTempLogPath, L"%hs", templogpath );
 
 	if (hFile == NULL)
 	{
-		hFile = freopen( cstrInstallJournal, "a+", stdout );
+		hFile = freopen( templogpath, "a+", stdout );
 	}
 
 	switch (dwReason)
@@ -1136,13 +1140,13 @@ DllMain(HANDLE hModule, DWORD dwReason, LPVOID lpReserved)
 				fclose(hFile);
 #ifndef TEST
 			// Remove first cstrInstallJournal created file
-			wPath = malloc(2*MAX_PATH);
-			swprintf( wPath, L"\\%hs", cstrInstallJournal );
-			DeleteFile(wPath);
-			free(wPath);
+			DeleteFile(wTempLogPath);
 #endif
 			break;
 	}
+
+	free(wTempLogPath);
+	free(templogpath);
 
 	return TRUE;
 }
