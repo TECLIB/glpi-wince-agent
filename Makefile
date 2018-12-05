@@ -24,6 +24,7 @@ clean:
 
 mrproper: clean
 	@rm -vf tools/{lcab,cabwiz,*.py,*.pyc} cabwiz.zip lcab*.tar.gz
+	@rm -rvf build
 
 cpl:
 	@$(MAKE) -w -C src glpi-wince-agent-cpl.dll
