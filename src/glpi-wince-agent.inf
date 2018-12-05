@@ -13,7 +13,7 @@ LinkFilename = "GLPI Agent"
 AgentVersion = "__VERSION__"
 
 [CEDevice]
-ProcessorType=2577 ; PROCESSOR_STRONGARM
+ProcessorType=0 ; Don't specify processor
 VersionMin = 4.21
 VersionMax = 8.0
 ; prevent warnings on screen resolution
