@@ -306,6 +306,8 @@ Install_Init(HWND hwndparent, BOOL bFirstcall, BOOL IsInstalled,
 		if (hFile != NULL)
 		{
 			fclose(hFile);
+			// Always try to create folder to be sure we can reopen the log file
+			CreateDirectory( pszinstalldir, NULL );
 			hFile = freopen( logpath, "w", stdout );
 		}
 
