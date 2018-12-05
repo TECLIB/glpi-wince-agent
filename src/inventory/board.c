@@ -33,6 +33,7 @@ enum supported_manufacturer {
 	Man_DataLogic,
 	Man_Motorola,
 	Man_Microsoft,
+	Man_Symbol,
 	Man_END
 };
 
@@ -42,6 +43,7 @@ MANUFACTURER Manufacturers[] = {
 	{	Man_DataLogic,	"Datalogic"		},
 	{	Man_Motorola,	"Motorola"		},
 	{	Man_Microsoft,	"Microsoft"		},
+	{	Man_Symbol,		"SYMBOL"		},
 	{	Man_END,		NULL			},
 };
 
@@ -78,7 +80,7 @@ void getBios(void)
 		wcstombs(sOEMInfo, wInfo, buflen);
 		free(wInfo);
 
-		// Find sOEMInfo first word length to munafacturer name check
+		// Find sOEMInfo first word length to manufacturer name check
 		Info = strchr( sOEMInfo, ' ');
 		buflen = Info - sOEMInfo;
 
