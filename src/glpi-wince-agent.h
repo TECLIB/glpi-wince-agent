@@ -3,7 +3,7 @@
 #define APPNAME "GLPI-Agent"
 
 #define MAJOR_VERSION      1
-#define MINOR_VERSION      5
+#define MINOR_VERSION      6
 
 #define DEFAULTVARDIR      "var"
 #define DEFAULTINSTALLPATH "\\Program Files\\" APPNAME
