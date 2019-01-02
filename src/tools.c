@@ -34,6 +34,9 @@ static LPSTR sHostname = NULL;
 
 PFIXED_INFO pFixedInfo = NULL;
 
+// Used to avoid too early not critical logging while logger is still not initialiazed
+BOOL bToolsInit = FALSE;
+
 void *allocate(ULONG size, LPCSTR reason )
 {
 	void *pointer = NULL;
@@ -185,7 +188,7 @@ static void LogTime(LPCSTR prefix, const LPFILETIME ThisTime)
 {
 	SYSTEMTIME SystemTime ;
 	FILETIME LocalFileTime;
-	if (FileTimeToLocalFileTime(ThisTime, &LocalFileTime) &&
+	if (bToolsInit && FileTimeToLocalFileTime(ThisTime, &LocalFileTime) &&
 	    FileTimeToSystemTime(&LocalFileTime, &SystemTime))
 	{
 		Log("%s: %4d-%02d-%02d %02d:%02d:%02d", prefix,
@@ -266,6 +269,8 @@ void ToolsInit(void)
 	{
 		computeNextRunDate();
 	}
+
+	bToolsInit = TRUE;
 }
 
 void ToolsQuit(void)
