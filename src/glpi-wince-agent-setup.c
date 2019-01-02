@@ -59,6 +59,7 @@ LPTSTR wVardir = NULL;
 DWORD keepFiles = 0;
 
 #define SHORT_BUFFER_SIZE 16
+#define LOG_BUFFER_SIZE 1024
 
 // We need to adapt installation against WinCE Version
 OSVERSIONINFO os = {
@@ -69,9 +70,19 @@ OSVERSIONINFO os = {
 /**
  * Logging functions
  */
+static void DebugSetup(LPCTSTR message)
+{
+	OutputDebugString(L"glpi-agent-setup: ");
+	OutputDebugString(message);
+	OutputDebugString(L"\n");
+}
+
 void Log(LPCSTR format, ...)
 {
 	SYSTEMTIME ts ;
+	LPSTR lpBuffer = NULL;
+	LPTSTR wLogBuf = NULL;
+	int buflen = 0;
 
 	GetLocalTime(&ts);
 	printf("%4d-%02d-%02d %02d:%02d:%02d: ",
@@ -84,6 +95,18 @@ void Log(LPCSTR format, ...)
 	vfprintf(stderr, format, args);
 	fprintf(stderr, "\n");
 #endif
+
+	lpBuffer = malloc(LOG_BUFFER_SIZE);
+	buflen = _vsnprintf( lpBuffer, LOG_BUFFER_SIZE-1, format, args);
+	if (buflen && buflen<LOG_BUFFER_SIZE)
+	{
+		wLogBuf = malloc(2*buflen+1);
+		swprintf( wLogBuf, L"%hs", lpBuffer );
+		DebugSetup(wLogBuf);
+		free(wLogBuf);
+	}
+	free(lpBuffer);
+
 	va_end(args);
 	printf("\n");
 }
@@ -91,17 +114,20 @@ void Log(LPCSTR format, ...)
 void DumpError(void)
 {
 	int buflen = 0 ;
+	int error = 0 ;
 	LPSTR lpErrorBuf = NULL;
 	LPTSTR lpMsgBuf = NULL;
 
-	if (GetLastError() != NO_ERROR)
+	error = GetLastError();
+
+	if (error != NO_ERROR)
 	{
 		FormatMessage(
 			FORMAT_MESSAGE_ALLOCATE_BUFFER |
 			FORMAT_MESSAGE_FROM_SYSTEM |
 			FORMAT_MESSAGE_IGNORE_INSERTS,
 			NULL,
-			GetLastError(),
+			error,
 			0, // Default language
 			(LPTSTR) &lpMsgBuf,
 			0,
@@ -113,13 +139,27 @@ void DumpError(void)
 			buflen = wcslen(lpMsgBuf)+1;
 			lpErrorBuf = malloc(buflen);
 			wcstombs(lpErrorBuf, lpMsgBuf, buflen);
-			Log("Error(0x%lx): %s", GetLastError(), lpErrorBuf);
+			Log("Error(0x%lx): %s", error, lpErrorBuf);
 			free(lpErrorBuf);
 			LocalFree( lpMsgBuf );
+		} else if (GetLastError() == ERROR_MR_MID_NOT_FOUND)
+		{
+			switch (error)
+			{
+				case ERROR_FILE_NOT_FOUND:
+					Log("Error(0x%lx): file not found", error);
+					break;
+				case ERROR_INVALID_HANDLE:
+					Log("Error(0x%lx): Invalid handle", error);
+					break;
+				default:
+					Log("Error(0x%lx): unknown error", error);
+					break;
+			}
 		}
 		else
 		{
-			Log("Error(0x%lx): Can't read error message", GetLastError());
+			Log("Error(0x%lx): Can't read error message, FormatMessage resul error 0x%lx", error, GetLastError());
 		}
 	}
 }
@@ -148,6 +188,7 @@ void StopAndDisableService(LPCSTR version)
 			else
 			{
 				Log("Failed to transmit stop request");
+				DumpError();
 			}
 		}
 
@@ -174,7 +215,7 @@ void StopAndDisableService(LPCSTR version)
 	}
 	else
 	{
-		Log("Failed to access " APPNAME " v%s", version);
+		Log("Failed to disable " APPNAME " v%s service", version);
 		DumpError();
 	}
 }
@@ -235,7 +276,7 @@ void DumpRegKey(HKEY hKey, LPWSTR wKey)
 		wcstombs(lpValueName, wKey, length);
 		strcat(lpValueName,"\\");
 		wcstombs(lpValueName+wcslen(wKey)+1, wValueName, length);
-		wsprintf(wValueName, L"%hs", lpValueName);
+		swprintf(wValueName, L"%hs", lpValueName);
 		if (OpenedKey(HKEY_LOCAL_MACHINE, wValueName, &hSubKey))
 		{
 			Log("Dumping subkey: %s\\", lpValueName);
@@ -1032,7 +1073,7 @@ Uninstall_Exit(HWND hwndparent)
 #else
 			swprintf(wPath, L"%hs", JOURNALBASENAME);
 #endif
-			if (!DeleteFile(wPath))
+			if (!DeleteFile(wPath) && GetLastError() != ERROR_FILE_NOT_FOUND)
 			{
 				wcstombs(path, wPath, MAX_PATH);
 				Log("Failed to delete '%s'", path);
@@ -1043,7 +1084,7 @@ Uninstall_Exit(HWND hwndparent)
 #else
 			swprintf(wPath, L"%hs", INTERFACEBASENAME);
 #endif
-			if (!DeleteFile(wPath))
+			if (!DeleteFile(wPath) && GetLastError() != ERROR_FILE_NOT_FOUND)
 			{
 				wcstombs(path, wPath, MAX_PATH);
 				Log("Failed to delete '%s'", path);
@@ -1109,6 +1150,8 @@ DllMain(HANDLE hModule, DWORD dwReason, LPVOID lpReserved)
 	LPSTR templogpath = NULL;
 	LPTSTR wTempLogPath = NULL;
 
+	DebugSetup(L"in DllMain");
+
 	templogpath = malloc(strlen(cstrInstallJournal)+7);
 	sprintf( templogpath, "\\Temp\\%s", cstrInstallJournal );
 	wTempLogPath = malloc(2*(strlen(templogpath)+1));
@@ -1125,6 +1168,7 @@ DllMain(HANDLE hModule, DWORD dwReason, LPVOID lpReserved)
 #ifdef TEST
 			fprintf(stderr, "%s: DllMain: loading\n", hdr);
 #endif
+			DebugSetup(L"Setup library loading");
 			Log("%s: Library loaded", hdr);
 			break;
 		case DLL_THREAD_ATTACH:
@@ -1134,6 +1178,7 @@ DllMain(HANDLE hModule, DWORD dwReason, LPVOID lpReserved)
 			//Log("%s: thread detached", hdr);
 			break;
 		case DLL_PROCESS_DETACH:
+			DebugSetup(L"Setup library unloading");
 #ifdef TEST
 			fprintf(stderr, "%s: DllMain: unloading\n", hdr);
 #endif
