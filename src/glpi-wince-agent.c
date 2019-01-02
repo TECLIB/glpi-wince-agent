@@ -48,10 +48,10 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int 
 	hi = hInstance;
 
 	wAgentName = allocate((strlen(AgentName)+1)*2, "wAgentName");
-	wsprintf( wAgentName, L"%hs", AgentName );
+	swprintf( wAgentName, L"%hs", AgentName );
 
 	wClassName = allocate((strlen(AppName)+1)*2, "wClassName");
-	wsprintf( wClassName, L"%hs", AppName );
+	swprintf( wClassName, L"%hs", AppName );
 
 	// Prevent application from starting twice
 	hWnd = FindWindow(wClassName, wAgentName);
@@ -142,7 +142,7 @@ static void setupMainPanel(HWND hWnd)
 	if (len)
 	{
 		buffer = allocate(++len*2, "server editbox");
-		wsprintf( buffer, L"%hs", conf.server );
+		swprintf( buffer, L"%hs", conf.server );
 		SendDlgItemMessage(dialog, IDC_EDIT_URL, WM_SETTEXT, 0, (LPARAM)buffer );
 		free(buffer);
 	}
@@ -152,7 +152,7 @@ static void setupMainPanel(HWND hWnd)
 	if (len)
 	{
 		buffer = allocate(++len*2, "local editbox");
-		wsprintf( buffer, L"%hs", conf.local );
+		swprintf( buffer, L"%hs", conf.local );
 		SendDlgItemMessage(dialog, IDC_EDIT_LOCAL, WM_SETTEXT, 0, (LPARAM)buffer );
 		free(buffer);
 	}
@@ -162,7 +162,7 @@ static void setupMainPanel(HWND hWnd)
 	if (len)
 	{
 		buffer = allocate(++len*2, "tag editbox");
-		wsprintf( buffer, L"%hs", conf.tag );
+		swprintf( buffer, L"%hs", conf.tag );
 		SendDlgItemMessage(dialog, IDC_EDIT_TAG, WM_SETTEXT, 0, (LPARAM)buffer );
 		free(buffer);
 	}
