@@ -136,7 +136,7 @@ CONFIG ConfigLoad(LPSTR path)
 	if( hConfig == NULL )
 	{
 		// Anyway try to check if server is to be pre-loaded as a
-		// defautl conf should be written now
+		// default conf should be written now
 		config.server = getRegString( HKEY_LOCAL_MACHINE,
 			"\\Software\\"EDITOR"\\"APPNAME,
 			"ServerAgentSetup");
