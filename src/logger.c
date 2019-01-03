@@ -27,6 +27,7 @@
 #include "glpi-wince-agent.h"
 
 #define LOGBUFFERSIZE 1024
+#define ERRORBUFFERSIZE 64
 
 #ifdef GWA
 #define KEEPBUFFER
@@ -62,22 +63,25 @@ static LPSTR getSystemError(void)
 #endif
 {
 	int buflen = 0;
+	int error = 0 ;
 #ifdef GWA
 	LPTSTR lpMsgBuf = NULL;
 #endif
+
+	error = GetLastError();
 
 	if (lpErrorBuf != NULL)
 		free(lpErrorBuf);
 	lpErrorBuf = NULL;
 
-	if (GetLastError() != NO_ERROR)
+	if (error != NO_ERROR)
 	{
 		FormatMessage(
 			FORMAT_MESSAGE_ALLOCATE_BUFFER |
 			FORMAT_MESSAGE_FROM_SYSTEM |
 			FORMAT_MESSAGE_IGNORE_INSERTS,
 			NULL,
-			GetLastError(),
+			error,
 			0, // Default language
 			(LPTSTR) &lpMsgBuf,
 			0,
@@ -94,6 +98,23 @@ static LPSTR getSystemError(void)
 			if (freeBuffer)
 #endif
 				LocalFree( lpMsgBuf );
+		}
+		else
+		{
+			lpErrorBuf = allocate( ERRORBUFFERSIZE, "Error buffer");
+			sprintf(lpErrorBuf, "%d, ", error);
+			switch (error)
+			{
+				case ERROR_FILE_NOT_FOUND:
+					strcat(lpErrorBuf, "file not found");
+					break;
+				case ERROR_INVALID_HANDLE:
+					strcat(lpErrorBuf, "invalid handle");
+					break;
+				default:
+					strcat(lpErrorBuf, "unknown error");
+					break;
+			}
 		}
 	}
 
