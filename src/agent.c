@@ -57,7 +57,7 @@ void Init(void)
 	if (!GetModuleFileNameW(NULL, wFileName, MAX_PATH))
 	{
 #ifdef GWA
-		fprintf(stderr, APPNAME ": Can't get own filename");
+		SystemDebug(APPNAME ": Can't get own filename");
 #else
 		MessageBox( NULL, L"Can't get filename", L"Agent Init", MB_OK | MB_ICONINFORMATION );
 #endif

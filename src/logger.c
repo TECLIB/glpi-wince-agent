@@ -230,12 +230,12 @@ BOOL LoggerOpen(void)
 			MessageBox( NULL, (LPCTSTR)wMessage, L"LoggerInit", MB_OK | MB_ICONINFORMATION );
 			free(wMessage);
 #else
-			fprintf( stderr, APPNAME": Error opening logfile: %s\n", lpLogText);
+			SystemDebug(APPNAME": Error opening logfile: %s\n", lpLogText);
 #endif
 		}
 		else
 		{
-			fprintf( stderr, APPNAME": Error opening logfile\n");
+			SystemDebug(APPNAME": Error opening logfile\n");
 		}
 #endif
 		return FALSE;
