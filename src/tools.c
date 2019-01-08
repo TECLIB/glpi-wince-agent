@@ -42,24 +42,33 @@ void *allocate(ULONG size, LPCSTR reason )
 	void *pointer = NULL;
 
 	if (size == 0) {
-		Error("[%s] No need to allocate memory", reason);
+#ifdef DEBUG
+		SystemDebug("No need to allocate memory");
+#endif
 	} else {
 		// Allocate memory from sizing information
 		if ((pointer = malloc(size)) == NULL)
 		{
+#ifdef DEBUG
+			SystemDebug("Can't allocate %lu bytes", size);
+#endif
 			if (reason != NULL)
+			{
 				Error("[%s] Can't allocate %lu bytes", reason, size);
-			else
-				Error("Can't allocate %lu bytes", size);
+			}
 #ifndef GWA
 			Abort();
+#else
+			Stop();
 #endif
 		}
 #ifdef DEBUG
 		else
 		{
 			if (reason != NULL)
-				Debug2("[%s] Allocated %i bytes", reason, size);
+			{
+				SystemDebug("[%s] Allocated %i bytes", reason, size);
+			}
 		}
 #endif
 	}
