@@ -14,6 +14,7 @@ DEBUG   =
 TEST    = 
 STDERR  = 
 SETUP   = 
+RDEBUG  = 
 
 # CAB Installer server url preload configuration
 # URL will be inserted in config file during first run if no config file is found
@@ -35,6 +36,7 @@ endif
 
 ifneq ($(DEBUG),)
 	CFLAGS += -DDEBUG
+	RDEBUG  = -DDEBUG
 endif
 
 ifneq ($(TEST),)
@@ -90,10 +92,10 @@ glpi-wince-agent-service.dll: ${SRVOBJS}
 	${CC} -shared ${CFLAGS} -DGWA -c -o $@ $?
 
 glpi-wince-agent.rsc: glpi-wince-agent.rc glpi-wince-agent.h
-	${WINDRES} ${DEBUG} glpi-wince-agent.rc glpi-wince-agent.rsc
+	${WINDRES} ${RDEBUG} glpi-wince-agent.rc glpi-wince-agent.rsc
 
 glpi-wince-agent-cpl.rsc: glpi-wince-agent-cpl.rc glpi-wince-agent.h
-	${WINDRES} ${DEBUG} glpi-wince-agent-cpl.rc glpi-wince-agent-cpl.rsc
+	${WINDRES} ${RDEBUG} glpi-wince-agent-cpl.rc glpi-wince-agent-cpl.rsc
 
 clean:
 	@rm -vf *.o *.lo *.exe *.dll *.rsc inventory/*.o inventory/*.lo *.dis
