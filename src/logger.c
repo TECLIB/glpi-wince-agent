@@ -1,7 +1,7 @@
 /*
  * GLPI Windows CE Agent
  * 
- * Copyright (C) 2016 - Teclib SAS
+ * Copyright (C) 2019 - Teclib SAS
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,24 +26,9 @@
 
 #include "glpi-wince-agent.h"
 
-#define LOGBUFFERSIZE 1024
-#define ERRORBUFFERSIZE 64
-
-#ifdef GWA
-#define KEEPBUFFER
-#define FREEBUFFER
-#else
-#define KEEPBUFFER TRUE
-#define FREEBUFFER FALSE
-#endif
+#define MAX_VS_SIZE 256
 
 FILE *hLogger;
-
-LPSTR lpLogBuffer = NULL;
-LPSTR lpErrorBuf = NULL;
-#ifndef GWA
-LPTSTR lpMsgBuf = NULL;
-#endif
 
 BOOL bLoggerInit = FALSE;
 
@@ -56,26 +41,20 @@ FILE *hStdErr = NULL;
 CRITICAL_SECTION SafeLogging;
 #endif
 
-#ifndef GWA
-static LPVOID getSystemError(BOOL freeBuffer)
-#else
-static LPSTR getSystemError(void)
-#endif
+LPSTR logFilename = NULL;
+static char lpLogText[MAX_VS_SIZE];
+
+static BOOL getSystemError(void)
 {
-	int buflen = 0;
 	int error = 0 ;
-#ifdef GWA
-	LPTSTR lpMsgBuf = NULL;
-#endif
+	BOOL ret = FALSE;
 
 	error = GetLastError();
 
-	if (lpErrorBuf != NULL)
-		free(lpErrorBuf);
-	lpErrorBuf = NULL;
-
 	if (error != NO_ERROR)
 	{
+		LPTSTR lpMsgBuf = NULL;
+
 		FormatMessage(
 			FORMAT_MESSAGE_ALLOCATE_BUFFER |
 			FORMAT_MESSAGE_FROM_SYSTEM |
@@ -90,40 +69,82 @@ static LPSTR getSystemError(void)
 
 		if (lpMsgBuf != NULL)
 		{
-			buflen = wcslen(lpMsgBuf)+1;
-			lpErrorBuf = allocate( buflen, "Error buffer");
-			wcstombs(lpErrorBuf, lpMsgBuf, buflen);
+			LPSTR buffer = NULL;
+			int buflen = 0;
 
-#ifndef GWA
-			if (freeBuffer)
-#endif
-				LocalFree( lpMsgBuf );
+			buflen = wcslen(lpMsgBuf)+1;
+			buffer = malloc(buflen);
+			if (buffer != NULL)
+			{
+				ret = TRUE;
+				wcstombs(buffer, lpMsgBuf, buflen);
+				sprintf(lpLogText, "%d, %s", error, buffer);
+				free(buffer);
+			}
+			LocalFree( lpMsgBuf );
 		}
 		else
 		{
-			lpErrorBuf = allocate( ERRORBUFFERSIZE, "Error buffer");
-			sprintf(lpErrorBuf, "%d, ", error);
+			ret = TRUE;
+			sprintf(lpLogText, "%d, ", error);
 			switch (error)
 			{
 				case ERROR_FILE_NOT_FOUND:
-					strcat(lpErrorBuf, "file not found");
+					strcat(lpLogText, "file not found");
 					break;
 				case ERROR_INVALID_HANDLE:
-					strcat(lpErrorBuf, "invalid handle");
+					strcat(lpLogText, "invalid handle");
 					break;
 				default:
-					strcat(lpErrorBuf, "unknown error");
+					strcat(lpLogText, "unknown error");
 					break;
 			}
 		}
 	}
 
-	return lpErrorBuf;
+	return ret;
+}
+
+void SystemDebug(LPCSTR format, ...)
+{
+	LPSTR buffer = NULL;
+
+#ifdef GWA
+	OutputDebugString(L"glpi-agent-service: ");
+#else
+	OutputDebugString(L"glpi-agent-client: ");
+#endif
+
+	buffer = malloc(MAX_VS_SIZE);
+	if (buffer != NULL)
+	{
+		LPTSTR wLogBuf = NULL;
+		int buflen = 0;
+
+		va_list args;
+		va_start(args, format);
+		buflen = _vsnprintf(buffer, MAX_VS_SIZE-1, format, args);
+		va_end(args);
+
+#ifdef STDERR
+		stderrf(buffer);
+#endif
+
+		// enlarge buffer to include CR
+		wLogBuf = malloc( 2*(++buflen)+1 );
+		if (wLogBuf != NULL)
+		{
+			swprintf( wLogBuf, L"%hs\n", buffer );
+			OutputDebugString(wLogBuf);
+			free(wLogBuf);
+		}
+		free(buffer);
+	}
 }
 
 void LoggerInit(void)
 {
-	if (!bLoggerInit)
+	if (logFilename == NULL)
 	{
 		int buflen = 0;
 #ifdef GWA
@@ -131,63 +152,104 @@ void LoggerInit(void)
 #else
 		LPCSTR basename = INTERFACEBASENAME;
 #endif
-		LPSTR filename = NULL;
+
 #ifdef TEST
 		buflen = strlen(basename) + 2 ;
-		filename = allocate( buflen, "Logfile name");
-		sprintf( filename, "\\%s", basename ); /* Force journal under \ */
+		logFilename = malloc(buflen);
+		if (logFilename != NULL)
+		{
+			/* Force journal under root folder */
+			sprintf( logFilename, "\\%s", basename );
+		}
 #else
 		if (VarDir == NULL)
 		{
 			VarDir = getRegPath( "VarDir" );
 		}
 		buflen = strlen(VarDir) + strlen(basename) + 2 ;
-		filename = allocate( buflen, "Logfile name");
-		sprintf( filename, "%s\\%s", VarDir, basename );
-#endif
-
-		/* Reassign "stdout" */
-		if( hLogger != NULL )
-			fclose( hLogger );
-
-#ifdef TEST
-		hLogger = freopen( filename, "a+", stdout );
-		fprintf(stderr, "GLPI-Agent journal: %s\n", filename);
-#else
-		hLogger = freopen( filename, "w", stdout );
-#endif
-		free(filename);
-
-		if( hLogger == NULL )
+		logFilename = malloc(buflen);
+		if (logFilename != NULL)
 		{
-			Error( "Can't reopen stdout toward file" );
-			if (getSystemError(KEEPBUFFER) != NULL)
-			{
-				fprintf( stdout, APPNAME": Error reopening stdout: %s\n", lpErrorBuf);
-#ifndef GWA
-				if (lpMsgBuf != NULL)
-				{
-					MessageBox( NULL, (LPCTSTR)lpMsgBuf, L"LoggerInit", MB_OK | MB_ICONINFORMATION );
-					LocalFree( lpMsgBuf );
-				}
-#endif
-			}
+			sprintf( logFilename, "%s\\%s", VarDir, basename );
 		}
+#endif
+#ifdef DEBUG
+		SystemDebug("in LoggerOpen: logFilename = %s", logFilename);
+#endif
+	}
 
-		/* Allocate log buffer */
-		lpLogBuffer = allocate(LOGBUFFERSIZE, "Log buffer");
-
+	if (!bLoggerInit)
+	{
 		bLoggerInit = TRUE;
 
 #ifdef GWA
 		// Initialize critical section
 		InitializeCriticalSection(&SafeLogging);
-#else
-		Log( "Logger initialized" );
-		Debug( "Debug level enabled" );
-		Debug2("Debug2 level enabled" );
+#ifndef TEST
+		// Truncate logfile
+		hLogger = fopen( logFilename, "w" );
+#endif
 #endif
 	}
+}
+
+BOOL LoggerOpen(void)
+{
+	lpLogText[MAX_VS_SIZE-1] = '\0';
+
+	if (!bLoggerInit)
+	{
+		LoggerInit();
+	}
+#ifdef GWA
+	if (!TryEnterCriticalSection(&SafeLogging))
+	{
+		SystemDebug("in LoggerOpen: TryEnterCriticalSection failure");
+		return FALSE;
+	}
+#endif
+
+	hLogger = fopen( logFilename, "a+" );
+
+	if( hLogger == NULL )
+	{
+#ifdef DEBUG
+		if (getSystemError())
+		{
+#ifndef GWA
+			LPTSTR wMessage = NULL;
+			wMessage = allocate( 2*strlen(lpLogText)+1, NULL);
+			swprintf( wMessage, L"%hs", lpLogText );
+			MessageBox( NULL, (LPCTSTR)wMessage, L"LoggerInit", MB_OK | MB_ICONINFORMATION );
+			free(wMessage);
+#else
+			fprintf( stderr, APPNAME": Error opening logfile: %s\n", lpLogText);
+#endif
+		}
+		else
+		{
+			fprintf( stderr, APPNAME": Error opening logfile\n");
+		}
+#endif
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+static void LoggerClose(void)
+{
+	if( hLogger != NULL )
+	{
+		fclose( hLogger );
+	}
+
+#ifdef GWA
+	if (bLoggerInit)
+	{
+		LeaveCriticalSection(&SafeLogging);
+	}
+#endif
 }
 
 void LoggerQuit(void)
@@ -196,243 +258,118 @@ void LoggerQuit(void)
 	{
 		bLoggerInit = FALSE;
 
+		free(logFilename);
+		logFilename = NULL;
+
 #ifdef GWA
 		DeleteCriticalSection(&SafeLogging);
-#else
-		Debug2( "Stopping logger..." );
 #endif
-
-		if( hLogger != NULL )
-			fclose( hLogger );
-
-		// Free buffers
-		free(lpErrorBuf);
-		free(lpLogBuffer);
-
-		lpErrorBuf  = NULL;
-		lpLogBuffer = NULL;
-		hLogger     = NULL;
 	}
 }
 
 void Log(LPCSTR format, ...)
 {
-	int size;
-
-#ifdef GWA
-	if (!bLoggerInit)
-	{
-		LoggerInit();
-	}
-	EnterCriticalSection(&SafeLogging);
-#endif
+	if (!LoggerOpen())
+		return;
 
 	va_list args;
 	va_start(args, format);
+	_vsnprintf(lpLogText, MAX_VS_SIZE-1, format, args);
+	va_end(args);
 
-	if (!bLoggerInit)
-	{
-#ifndef GWA
-		vfprintf(stderr, format, args);
-#endif
-	}
-	else
-	{
-		size = vsprintf((LPSTR)lpLogBuffer, format, args);
+	// Only log on system in debug mode
+	if (conf.debug)
+		SystemDebug(lpLogText);
 
-		if (size && size<1024)
-			fprintf( stdout, "%sInfo  : %s\n", getTimestamp(), lpLogBuffer );
-		else
-		{
-			if (getSystemError(FREEBUFFER) != NULL)
-				fprintf( stdout, "%sError with '%s' format, %s\n", getTimestamp(), format, lpErrorBuf);
-			else
-				fprintf( stdout, "%sError with '%s' format\n", getTimestamp(), format);
-#ifndef GWA
-			fprintf( stderr, "Log Buffer overflow\n" );
-			exit(EXIT_FAILURE);
-#endif
-		}
-	}
+	fprintf( hLogger, "%sInfo  : %s\n", getTimestamp(), lpLogText );
 
 	SetLastError(NO_ERROR);
 
-	va_end(args);
-#ifdef GWA
-	LeaveCriticalSection(&SafeLogging);
-#endif
+	LoggerClose();
 }
 
 void Error(LPCSTR format, ...)
 {
-	int size;
-
-#ifdef GWA
-	if (!bLoggerInit)
-	{
-		LoggerInit();
-	}
-	EnterCriticalSection(&SafeLogging);
-#endif
+	if (!LoggerOpen())
+		return;
 
 	va_list args;
 	va_start(args, format);
+	_vsnprintf(lpLogText, MAX_VS_SIZE-1, format, args);
+	va_end(args);
 
-	if (!bLoggerInit)
-	{
-#ifndef GWA
-		vfprintf(stderr, format, args);
-#endif
-	}
-	else
-	{
-		size = vsprintf((LPSTR)lpLogBuffer, format, args);
+	// Only log error on system in debug mode
+	if (conf.debug)
+		SystemDebug(lpLogText);
 
-		if (size && size<1024)
-		{
-			fprintf( stdout, "%sError : %s\n", getTimestamp(), lpLogBuffer );
-#ifndef GWA
-			fprintf( stderr, "Error : %s\n", lpLogBuffer );
-#endif
-			if (getSystemError(FREEBUFFER) != NULL)
-				fprintf( stdout, "Last system error: %s\n", lpErrorBuf);
+	fprintf(hLogger, "%sError: %s\n", getTimestamp(), lpLogText);
+
 #ifdef DEBUG
-			Debug2("Errno: %d", GetLastError());
+	Debug2("Errno: %d", GetLastError());
 #endif
-		}
-		else
-		{
-			if (getSystemError(FREEBUFFER) != NULL)
-				fprintf( stdout, "%sError with '%s' format, %s\n", getTimestamp(), format, lpErrorBuf);
-			else
-				fprintf( stdout, "%sError with '%s' format\n", getTimestamp(), format);
-#ifndef GWA
-			fprintf( stderr, "Error Buffer overflow\n" );
-			exit(EXIT_FAILURE);
-#endif
-		}
+
+	if (getSystemError())
+	{
+		fprintf( hLogger, "%sLast system error: %s\n", getTimestamp(), lpLogText);
 	}
 
 	SetLastError(NO_ERROR);
 
-	va_end(args);
-#ifdef GWA
-	LeaveCriticalSection(&SafeLogging);
-#endif
+	LoggerClose();
 }
 
 void Debug(LPCSTR format, ...)
 {
-	int size;
-
-#ifdef GWA
-	if (!bLoggerInit)
-	{
-		LoggerInit();
-	}
-	EnterCriticalSection(&SafeLogging);
-#endif
+	if (!conf.debug || !LoggerOpen())
+		return;
 
 	va_list args;
 	va_start(args, format);
-
-	if (!conf.debug || !bLoggerInit)
-		return;
-
-	size = vsprintf((LPSTR)lpLogBuffer, format, args);
-
-	if (size && size<1024)
-		fprintf( stdout, "%sDebug : %s\n", getTimestamp(), (LPSTR)lpLogBuffer );
-#ifndef GWA
-	else
-	{
-		fprintf( stderr, "Debug Buffer overflow\n" );
-		exit(EXIT_FAILURE);
-	}
-#endif
-
+	_vsnprintf(lpLogText, MAX_VS_SIZE-1, format, args);
 	va_end(args);
-#ifdef GWA
-	LeaveCriticalSection(&SafeLogging);
-#endif
+
+	SystemDebug(lpLogText);
+
+	fprintf(hLogger, "%sDebug: %s\n", getTimestamp(), lpLogText);
+
+	LoggerClose();
 }
 
 void Debug2(LPCSTR format, ...)
 {
-	int size;
-
-#ifdef GWA
-	if (!bLoggerInit)
-	{
-		LoggerInit();
-	}
-	EnterCriticalSection(&SafeLogging);
-#endif
+	if (conf.debug<2 || !LoggerOpen())
+		return;
 
 	va_list args;
 	va_start(args, format);
-
-	if (conf.debug<2 || !bLoggerInit)
-		return;
-
-	size = vsprintf((LPSTR)lpLogBuffer, format, args);
-
-	if (size && size<1024)
-		fprintf( stdout, "%sDebug2: %s\n", getTimestamp(), (LPSTR)lpLogBuffer );
-#ifndef GWA
-	else
-	{
-		fprintf( stderr, "Debug2 Buffer overflow\n" );
-		exit(EXIT_FAILURE);
-	}
-#endif
-
+	_vsnprintf(lpLogText, MAX_VS_SIZE-1, format, args);
 	va_end(args);
-#ifdef GWA
-	LeaveCriticalSection(&SafeLogging);
-#endif
+
+	SystemDebug(lpLogText);
+
+	fprintf(hLogger, "%sDebug2: %s\n", getTimestamp(), lpLogText);
+
+	LoggerClose();
 }
 
 void DebugError(LPCSTR format, ...)
 {
-	int size;
 
-#ifdef GWA
-	if (!bLoggerInit)
-	{
-		LoggerInit();
-	}
-	EnterCriticalSection(&SafeLogging);
-#endif
+	if (!conf.debug || !LoggerOpen())
+		return;
 
 	va_list args;
 	va_start(args, format);
+	_vsnprintf(lpLogText, MAX_VS_SIZE-1, format, args);
+	va_end(args);
 
-	if (!conf.debug || !bLoggerInit)
-		return;
+	SystemDebug(lpLogText);
 
-	size = vsprintf((LPSTR)lpLogBuffer, format, args);
-
-	if (size && size<1024)
-	{
-		fprintf( stdout, "%sDebugE: %s\n", getTimestamp(), (LPSTR)lpLogBuffer );
-		if (getSystemError(FREEBUFFER) != NULL)
-			fprintf( stdout, "%sDebugE: System error: %s\n", getTimestamp(), lpErrorBuf);
-	}
-#ifndef GWA
-	else
-	{
-		fprintf( stderr, "DebugE Buffer overflow\n" );
-		exit(EXIT_FAILURE);
-	}
-#endif
+	fprintf(hLogger, "%sDebugE: %s\n", getTimestamp(), lpLogText);
 
 	SetLastError(NO_ERROR);
 
-	va_end(args);
-#ifdef GWA
-	LeaveCriticalSection(&SafeLogging);
-#endif
+	LoggerClose();
 }
 
 void RawDebug(LPCSTR format, LPBYTE buffer, ULONG size)
@@ -441,13 +378,6 @@ void RawDebug(LPCSTR format, LPBYTE buffer, ULONG size)
 	LPSTR dumpbuffer = NULL, index = NULL;
 	LPBYTE max = buffer + size ;
 	BYTE value;
-
-#ifdef GWA
-	if (!bLoggerInit)
-	{
-		LoggerInit();
-	}
-#endif
 
 	if (!conf.debug || !bLoggerInit)
 		return;

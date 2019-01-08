@@ -47,8 +47,9 @@ HANDLE hWorkerThread = NULL;
 DWORD GWA_Init( DWORD dwContext )
 {
 	DWORD ret = 0;
-#ifdef STDERR
-	stderrf("%s: GWA_Init(%d)", hdr, dwContext);
+
+#ifdef DEBUG
+	SystemDebug("%s: GWA_Init(%d)", hdr, dwContext);
 #endif
 
 	/*
@@ -66,16 +67,15 @@ DWORD GWA_Init( DWORD dwContext )
 		Debug("Unsupported Init Call: Context=%d State=%d", dwContext, dwServiceState);
 	}
 
-	// Always free journal file
-	LoggerQuit();
-
 	return ret;
 }
 
 BOOL GWA_Deinit( DWORD dwContext )
 {
-#ifdef STDERR
-	stderrf("%s: GWA_Deinit(0x%08x)", hdr, dwContext);
+	BOOL ret = FALSE;
+
+#ifdef DEBUG
+	SystemDebug("%s: GWA_Deinit(0x%08x)", hdr, dwContext);
 #endif
 
 	if (dwContext == 1)
@@ -86,15 +86,14 @@ BOOL GWA_Deinit( DWORD dwContext )
 #ifdef STDERR
 		stderrf(APPNAME " v" VERSION " service stopped");
 #endif
-		return TRUE;
+		ret = TRUE;
+	}
+	else
+	{
+		Debug("Unsupported Deinit Call: Context=%d State=%d", dwContext, dwServiceState);
 	}
 
-	Debug("Unsupported Deinit Call: Context=%d State=%d", dwContext, dwServiceState);
-
-	// Always free journal file
-	LoggerQuit();
-
-	return FALSE;
+	return ret;
 }
 
 /**
@@ -105,10 +104,6 @@ BOOL GWA_IOControl( DWORD dwData, DWORD dwCode, PBYTE pBufIn,
                           PDWORD pdwActualOut )
 {
 	DWORD dwError = ERROR_INVALID_PARAMETER;
-
-#ifdef STDERR
-	stderrf("%s: GWA_IOControl(0x%08lx,0x%08lx)", hdr, dwData, dwCode);
-#endif
 
 #ifdef DEBUG
 	Debug2("Received IOControl: 0x%08x 0x%08x", dwData, dwCode);
@@ -235,7 +230,6 @@ BOOL GWA_IOControl( DWORD dwData, DWORD dwCode, PBYTE pBufIn,
 			dwError = ERROR_SUCCESS;
 			*(DWORD *)pBufOut = 1;
 			dwServiceState = SERVICE_STATE_UNLOADING;
-			return TRUE;
 			break;
 		case IOCTL_SERVICE_REFRESH:
 			Debug2("Got refresh");
@@ -330,9 +324,6 @@ BOOL GWA_IOControl( DWORD dwData, DWORD dwCode, PBYTE pBufIn,
 			break;
 	}
 
-	// Always free journal file
-	LoggerQuit();
-
 	if (dwError != ERROR_SUCCESS)
 		SetLastError(dwError);
 
@@ -344,8 +335,8 @@ BOOL GWA_IOControl( DWORD dwData, DWORD dwCode, PBYTE pBufIn,
  */
 BOOL GWA_Open( DWORD dwData, DWORD dwAccess, DWORD dwShareMode )
 {
-#ifdef STDERR
-	stderrf("%s: GWA_Open(0x%08x,0x%08x,0x%08x)", hdr, dwData, dwAccess, dwShareMode);
+#ifdef DEBUG
+	SystemDebug("%s: GWA_Open(0x%08x,0x%08x,0x%08x)", hdr, dwData, dwAccess, dwShareMode);
 #endif
 
 	return TRUE;
@@ -353,8 +344,8 @@ BOOL GWA_Open( DWORD dwData, DWORD dwAccess, DWORD dwShareMode )
 
 DWORD GWA_Read( DWORD dwData, LPVOID pBuf, DWORD dwLen )
 {
-#ifdef STDERR
-	stderrf("%s: GWA_Read((0x%08x,...,0x%08x)", hdr, dwData, dwLen);
+#ifdef DEBUG
+	SystemDebug("%s: GWA_Read((0x%08x,...,0x%08x)", hdr, dwData, dwLen);
 #endif
 
 	return 0;
@@ -362,8 +353,8 @@ DWORD GWA_Read( DWORD dwData, LPVOID pBuf, DWORD dwLen )
 
 DWORD GWA_Write( DWORD dwData, LPVOID pInBuf, DWORD dwInLen )
 {
-#ifdef STDERR
-	stderrf("%s: GWA_Write(0x%08x,...,0x%08x)", hdr, dwData, dwInLen);
+#ifdef DEBUG
+	SystemDebug("%s: GWA_Write(0x%08x,...,0x%08x)", hdr, dwData, dwInLen);
 #endif
 
 	if (dwInLen < 16)
@@ -397,16 +388,13 @@ DWORD GWA_Write( DWORD dwData, LPVOID pInBuf, DWORD dwInLen )
 		Debug("Got unexpected request, len=%d", dwInLen);
 	}
 
-	// Always free journal file
-	LoggerQuit();
-
 	return dwInLen;
 }
 
 BOOL GWA_Close( DWORD dwData )
 {
-#ifdef STDERR
-	stderrf("%s: GWA_Close(0x%08x)", hdr, dwData);
+#ifdef DEBUG
+	SystemDebug("%s: GWA_Close(0x%08x)", hdr, dwData);
 #endif
 
 	return TRUE;
@@ -418,8 +406,8 @@ BOOL GWA_Close( DWORD dwData )
 BOOL APIENTRY
 DllMain(HANDLE hModule, DWORD dwReason, LPVOID lpReserved)
 {
-#ifdef STDERR
-			stderrf("%s: DllMain(dwReason=0x%08x)", hdr, dwReason);
+#ifdef DEBUG
+	SystemDebug("%s: DllMain(dwReason=0x%08x)", hdr, dwReason);
 #endif
 
 	switch (dwReason)
@@ -445,15 +433,9 @@ DllMain(HANDLE hModule, DWORD dwReason, LPVOID lpReserved)
 
 			break;
 		case DLL_THREAD_ATTACH:
-#ifdef STDERR
-			stderrf("%s: DllMain: thread attached", hdr);
-#endif
 			Debug("%s: thread attached", hdr);
 			break;
 		case DLL_THREAD_DETACH:
-#ifdef STDERR
-			stderrf("%s: DllMain: thread detached", hdr);
-#endif
 			Debug("%s: thread detached", hdr);
 			break;
 		case DLL_PROCESS_DETACH:
@@ -467,19 +449,14 @@ DllMain(HANDLE hModule, DWORD dwReason, LPVOID lpReserved)
 			{
 				stderrf("%s: unloading library on process termination", hdr);
 			}
+
+			if (hStdErr != NULL)
+			{
+				fclose(hStdErr);
+			}
 #endif
 			break;
 	}
-
-	// Always free journal file
-	LoggerQuit();
-
-#ifdef STDERR
-	if (hStdErr != NULL)
-	{
-		fclose(hStdErr);
-	}
-#endif
 
 	return TRUE;
 }

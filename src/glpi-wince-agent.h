@@ -170,6 +170,7 @@ void getNetworks(void);
 /*
  * logger.c
  */
+void SystemDebug(LPCSTR format, ...);
 void LoggerInit(void);
 void LoggerQuit(void);
 void Log(LPCSTR format, ...);

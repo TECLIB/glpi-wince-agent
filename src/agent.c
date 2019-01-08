@@ -73,6 +73,7 @@ void Init(void)
 	free(wFileName);
 
 	LoggerInit();
+	Log("Logger initialized (debug=%d)", conf.debug);
 
 	Log("%s started", AgentName);
 
