@@ -155,6 +155,9 @@ void DumpError(void)
 				case ERROR_INVALID_HANDLE:
 					Log("Error(%d): Invalid handle", error);
 					break;
+				case ERROR_SHARING_VIOLATION:
+					Log("Error(%d): file in use", error);
+					break;
 				default:
 					Log("Error(%d): unknown error", error);
 					break;
