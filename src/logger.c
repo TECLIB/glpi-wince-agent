@@ -28,7 +28,7 @@
 
 #define MAX_VS_SIZE 256
 
-FILE *hLogger;
+FILE *hLogger = NULL;
 
 BOOL bLoggerInit = FALSE;
 
@@ -188,6 +188,8 @@ void LoggerInit(void)
 #ifndef TEST
 		// Truncate logfile
 		hLogger = fopen( logFilename, "w" );
+		fclose(hLogger);
+		hLogger = NULL;
 #endif
 #endif
 	}
@@ -208,6 +210,11 @@ BOOL LoggerOpen(void)
 		return FALSE;
 	}
 #endif
+
+	if( hLogger != NULL )
+	{
+		return FALSE;
+	}
 
 	hLogger = fopen( logFilename, "a+" );
 
@@ -242,6 +249,7 @@ static void LoggerClose(void)
 	if( hLogger != NULL )
 	{
 		fclose( hLogger );
+		hLogger = NULL;
 	}
 
 #ifdef GWA
