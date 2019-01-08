@@ -218,3 +218,4 @@ DWORD getRegValue( HKEY hive, LPCSTR subkey, LPCSTR value );
 LPSTR getRegPath( LPCSTR value );
 LPSTR vsPrintf( LPCSTR fmt, ... );
 LPSTR hexstring(BYTE *addr, int addrlen);
+void checkMemory(void);

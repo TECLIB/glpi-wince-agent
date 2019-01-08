@@ -75,6 +75,8 @@ void Init(void)
 	LoggerInit();
 	Log("Logger initialized (debug=%d)", conf.debug);
 
+	checkMemory();
+
 	Log("%s started", AgentName);
 
 #ifdef DEBUG
@@ -122,6 +124,8 @@ static DWORD WINAPI _lpStartTriggerThread(LPVOID lpParameter)
 		Sleep(DEFAULT_MINIMAL_SLEEP);
 
 		Run(FALSE);
+
+		checkMemory();
 	}
 
 	return 0;

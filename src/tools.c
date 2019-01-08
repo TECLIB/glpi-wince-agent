@@ -508,3 +508,13 @@ LPSTR hexstring(BYTE *addr, int addrlen)
 
 	return buf;
 }
+
+void checkMemory(void)
+{
+	MEMORYSTATUS memInfo;
+
+	memInfo.dwLength = sizeof(memInfo);
+	GlobalMemoryStatus(&memInfo);
+
+	Debug("Memory usage: %d/%d kB", (memInfo.dwTotalPhys-memInfo.dwAvailPhys)/1024, memInfo.dwTotalPhys/1024);
+}
