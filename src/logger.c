@@ -241,6 +241,11 @@ BOOL LoggerOpen(void)
 		return FALSE;
 	}
 
+	if (setvbuf(hLogger, NULL, _IONBF, 0) != 0)
+	{
+		SystemDebug("Failed to make logger unbuffered");
+	}
+
 	return TRUE;
 }
 
