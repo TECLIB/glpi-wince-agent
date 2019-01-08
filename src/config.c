@@ -153,6 +153,12 @@ CONFIG ConfigLoad(LPSTR path)
 		(fgets(buffer, MAX_LENGHT-1, hConfig) != NULL || !feof(hConfig))
 	)
 	{
+		if (ferror(hConfig) || ftell(hConfig) < 0)
+		{
+			Error("Error reading config from %s file (%d)", configFile, GetLastError());
+			break;
+		}
+
 		// Strip line buffer
 		strip(buffer);
 
