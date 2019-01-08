@@ -147,13 +147,16 @@ void DumpError(void)
 			switch (error)
 			{
 				case ERROR_FILE_NOT_FOUND:
-					Log("Error(0x%lx): file not found", error);
+					Log("Error(%d): file not found", error);
+					break;
+				case ERROR_DIR_NOT_EMPTY:
+					Log("Error(%d): directory not empty", error);
 					break;
 				case ERROR_INVALID_HANDLE:
-					Log("Error(0x%lx): Invalid handle", error);
+					Log("Error(%d): Invalid handle", error);
 					break;
 				default:
-					Log("Error(0x%lx): unknown error", error);
+					Log("Error(%d): unknown error", error);
 					break;
 			}
 		}
