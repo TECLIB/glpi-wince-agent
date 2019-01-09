@@ -298,10 +298,12 @@ BOOL LoggerOpen(void)
 		return FALSE;
 	}
 
+#ifdef DEBUG
 	if (setvbuf(hLogger, NULL, _IONBF, 0) != 0)
 	{
 		SystemDebug("Failed to make logger unbuffered");
 	}
+#endif
 
 	return TRUE;
 }
