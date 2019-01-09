@@ -1,7 +1,7 @@
 /*
  * GLPI Windows CE Agent
  * 
- * Copyright (C) 2016 - Teclib SAS
+ * Copyright (C) 2019 - Teclib SAS
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,6 +24,8 @@
 #include <winsock2.h>
 
 #include "../glpi-wince-agent.h"
+
+#define MAX_ADDRESS_LENGHT 256
 
 // Function: FormatPhysicalAddress
 // Description:
@@ -66,98 +68,124 @@ static LPCSTR SupportedAdapterType(int type)
 {
 	switch (type)
 	{
-		case MIB_IF_TYPE_ETHERNET:
+		case IF_TYPE_ETHERNET_CSMACD:
+		case IF_TYPE_FASTETHER:
+		case IF_TYPE_FASTETHER_FX:
+		case IF_TYPE_GIGABITETHERNET:
 			return "ethernet";
-		case MIB_IF_TYPE_PPP|IF_TYPE_MODEM:
+		case IF_TYPE_PPP:
+		case IF_TYPE_MODEM:
+		case IF_TYPE_ISDN:
 			return "dialup";
-		case MIB_IF_TYPE_LOOPBACK:
-			return "loopback";
+		case IF_TYPE_IEEE80211:
+			return "wifi";
+		//case IF_TYPE_SOFTWARE_LOOPBACK:
+		//	return "loopback";
 	}
 	return NULL;
 }
 
-LPSTR getIPAddress(void)
-{
-	LPSTR ipaddress = NULL;
-	PFIXED_INFO pFixedInfo = NULL;
-
-	pFixedInfo = getNetworkParams();
-	return ipaddress;
-}
-
 void getNetworks(void)
 {
-	LPSTR macaddress = NULL;
 	LIST *Network = NULL;
-	LPCSTR type;
-	DWORD Err = 0, maclen = 0, Size = 0;
-	PIP_ADAPTER_INFO pAdapterInfos = NULL, pAdapterInfo = NULL;
+	DWORD Err = 0, Size = 0;
+	PIP_ADAPTER_ADDRESSES pAdapterAddresses = NULL, pAdapterAddress = NULL;
 
 	// First get needed buffer size and allocate buffer
-	if ((Err = GetAdaptersInfo(pAdapterInfos, &Size)) != NO_ERROR)
+	if ((Err = GetAdaptersAddresses(AF_UNSPEC, 0, NULL, pAdapterAddresses, &Size)) != NO_ERROR)
 	{
 		if ( Err == ERROR_NO_DATA )
 		{
 			Log("No network Adapter found");
 			return;
 		}
-		else if ((Err != ERROR_BUFFER_OVERFLOW) && (Err != ERROR_INSUFFICIENT_BUFFER))
+		else if (Err != ERROR_BUFFER_OVERFLOW)
 		{
-			Error("GetAdaptersInfo() sizing failed with error code %d\n", (int)Err);
+			Error("GetAdaptersAddresses() sizing failed with error code %d\n", (int)Err);
 			return;
 		}
 	}
-	pAdapterInfos = allocate(Size, "pAdapterInfos");
+	pAdapterAddresses = allocate(Size, "pAdapterAddresses");
 
-	// Then get all adaptaters info
-	if ((Err = GetAdaptersInfo(pAdapterInfos, &Size)) != NO_ERROR)
+	// Then get all adapters adresses
+	if ((Err = GetAdaptersAddresses(AF_UNSPEC, 0, NULL, pAdapterAddresses, &Size)) != NO_ERROR)
 	{
-		Error("GetAdaptersInfo() failed with error code %d\n", (int)Err);
-		free(pAdapterInfos);
+		Error("GetAdaptersAddresses() failed with error code %d\n", (int)Err);
+		free(pAdapterAddresses);
 		return;
 	}
 
 	// Enumerate through each retuned adapter and return first available one
-	pAdapterInfo = pAdapterInfos;
-	while (pAdapterInfo)
+	pAdapterAddress = pAdapterAddresses;
+	while (pAdapterAddress)
 	{
+		LPCSTR type = NULL;
+
+		Debug("Analysing adapter <%s> with type <%d>", pAdapterAddress->AdapterName, pAdapterAddress->IfType);
+
 		// Check type
-		type = SupportedAdapterType(pAdapterInfo->Type);
+		type = SupportedAdapterType(pAdapterAddress->IfType);
 		if (type != NULL)
 		{
+			LPSTR buffer = NULL;
+
 			// Prepare Networks list
 			Network = createList("NETWORKS");
 
 			// Add recognized type
 			addField( Network, "TYPE", (LPSTR)type );
 
-			addField( Network, "DESCRIPTION", pAdapterInfo->Description );
+			// convert and add description
+			Size = wcslen(pAdapterAddress->Description)+1;
+			buffer = allocate(Size, "Description");
+			wcstombs(buffer, pAdapterAddress->Description, Size);
+			addField( Network, "DESCRIPTION", buffer );
+			free(buffer);
 
 			// Add model
-			addField( Network, "MODEL", pAdapterInfo->AdapterName );
+			addField( Network, "MODEL", pAdapterAddress->AdapterName );
 
 			// Add macaddress field
-			maclen = pAdapterInfo->AddressLength;
-			if (maclen && macaddress == NULL)
+			Size = pAdapterAddress->PhysicalAddressLength;
+			if (Size)
 			{
-				macaddress = allocate( maclen * 3, "MacAddress");
-				FormatPhysicalAddress(pAdapterInfo->Address, maclen, macaddress);
-				addField( Network, "MACADDR", macaddress );
-				free(macaddress);
+				buffer = allocate( Size * 3, "MacAddress");
+				if (buffer != NULL)
+				{
+					FormatPhysicalAddress(pAdapterAddress->PhysicalAddress, Size, buffer);
+					addField( Network, "MACADDR", buffer );
+				}
+				free(buffer);
 			}
 
-			// Add IP address
-			addField( Network, "IPADDRESS",
-				pAdapterInfo->CurrentIpAddress->IpAddress.String );
-			addField( Network, "IPMASK",
-				pAdapterInfo->CurrentIpAddress->IpMask.String );
+			if (pAdapterAddress->FirstUnicastAddress != NULL)
+			{
+				LPTSTR wAddressString = NULL;
+				PIP_ADAPTER_UNICAST_ADDRESS Unicast = pAdapterAddress->FirstUnicastAddress;
+				wAddressString = allocate( 2*MAX_ADDRESS_LENGHT, "IP Address");
+				Size = MAX_ADDRESS_LENGHT - 1;
+				WSAAddressToString(Unicast->Address.lpSockaddr, Unicast->Address.iSockaddrLength, NULL, wAddressString, &Size);
+				if (WSAAddressToString(Unicast->Address.lpSockaddr, Unicast->Address.iSockaddrLength, NULL, wAddressString, &Size) == 0)
+				{
+					buffer = allocate( MAX_ADDRESS_LENGHT, "IP Address");
+					wcstombs(buffer, wAddressString, Size);
+					// Add IP address
+					addField( Network, "IPADDRESS", buffer );
+					free(buffer);
+				}
+				else
+				{
+					DebugError("Unexpected ws2 error %d looking for address (size=%d)", WSAGetLastError(), Size);
+				}
+				free(wAddressString);
+			}
 
 			// Finally add netry to Networks inventory
 			InventoryAdd( "NETWORKS", Network );
 		}
 
-		pAdapterInfo = pAdapterInfo->Next;
+		pAdapterAddress = pAdapterAddress->Next;
 	}
 
-	free(pAdapterInfos);
+	free(pAdapterAddresses);
 }
