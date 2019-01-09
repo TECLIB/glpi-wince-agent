@@ -1074,6 +1074,7 @@ Uninstall_Exit(HWND hwndparent)
 		}
 		else
 		{
+			int len = 0;
 #ifndef TEST
 			swprintf(wPath, L"%s\\%hs", wVardir, JOURNALBASENAME);
 #else
@@ -1085,11 +1086,29 @@ Uninstall_Exit(HWND hwndparent)
 				Log("Failed to delete '%s'", path);
 				DumpError();
 			}
+			len = wcslen(wPath);
+			wPath[len-4] = '\0';
+			wcscat(wPath, L".old.txt");
+			if (!DeleteFile(wPath) && GetLastError() != ERROR_FILE_NOT_FOUND)
+			{
+				wcstombs(path, wPath, MAX_PATH);
+				Log("Failed to delete '%s'", path);
+				DumpError();
+			}
 #ifndef TEST
 			swprintf(wPath, L"%s\\%hs", wVardir, INTERFACEBASENAME);
 #else
 			swprintf(wPath, L"%hs", INTERFACEBASENAME);
 #endif
+			if (!DeleteFile(wPath) && GetLastError() != ERROR_FILE_NOT_FOUND)
+			{
+				wcstombs(path, wPath, MAX_PATH);
+				Log("Failed to delete '%s'", path);
+				DumpError();
+			}
+			len = wcslen(wPath);
+			wPath[len-4] = '\0';
+			wcscat(wPath, L".old.txt");
 			if (!DeleteFile(wPath) && GetLastError() != ERROR_FILE_NOT_FOUND)
 			{
 				wcstombs(path, wPath, MAX_PATH);

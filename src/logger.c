@@ -27,6 +27,7 @@
 #include "glpi-wince-agent.h"
 
 #define MAX_VS_SIZE 256
+#define MAX_LF_SIZE (64*1024)
 
 FILE *hLogger = NULL;
 
@@ -197,6 +198,8 @@ void LoggerInit(void)
 
 BOOL LoggerOpen(void)
 {
+	static DWORD expiration = 0;
+
 	lpLogText[MAX_VS_SIZE-1] = '\0';
 
 	if (!bLoggerInit)
@@ -214,6 +217,60 @@ BOOL LoggerOpen(void)
 	if( hLogger != NULL )
 	{
 		return FALSE;
+	}
+
+	// Check if it's time to rotate before logging: check at first run
+	// and than every 10 minutes if log file is larger than 64kB before
+	// rotating it
+	if (expiration < GetTickCount())
+	{
+		LPTSTR wLogFile = NULL;
+		HANDLE hLogFile = NULL;
+		DWORD dwSize = 0;
+		int buflen = strlen(logFilename);
+
+		wLogFile = malloc(2*(buflen+1));
+		if (wLogFile != NULL)
+		{
+			swprintf(wLogFile, L"%hs", logFilename);
+			hLogFile = CreateFile(wLogFile, GENERIC_READ, FILE_SHARE_READ|FILE_SHARE_WRITE, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+			if (hLogFile != NULL)
+			{
+				dwSize = GetFileSize(hLogFile, NULL);
+				CloseHandle(hLogFile);
+			}
+		}
+
+		if (dwSize == 0xFFFFFFFF)
+		{
+			SystemDebug("Failed to check %s file size", logFilename);
+		}
+		else if (dwSize > MAX_LF_SIZE)
+		{
+			LPTSTR wOldLogFile = NULL;
+
+			wOldLogFile = malloc(2*(buflen+5));
+			if (wOldLogFile != NULL)
+			{
+#ifdef DEBUG
+				SystemDebug("Rotating %s log file", logFilename);
+#endif
+				swprintf(wOldLogFile, L"%hs", logFilename);
+				wOldLogFile[buflen-4] = '\0';
+				wcscat(wOldLogFile, L".old.txt");
+				DeleteFile(wOldLogFile);
+				MoveFile(wLogFile, wOldLogFile);
+			}
+			free(wOldLogFile);
+		}
+#ifdef DEBUG
+		else if (dwSize)
+		{
+			SystemDebug("%s file size = %d bytes", logFilename, dwSize);
+		}
+#endif
+		free(wLogFile);
+		expiration = GetTickCount() + EXPIRATION_DELAY;
 	}
 
 	hLogger = fopen( logFilename, "a+" );
