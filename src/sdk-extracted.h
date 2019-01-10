@@ -63,6 +63,7 @@ DWORD WINAPI RCM_GetESN(LPELECTRONIC_SERIAL_NUMBER lpESN);	// Pointer to ESN str
 WINBASEAPI HRESULT WINAPI GetDeviceUniqueID(LPBYTE,DWORD,DWORD,LPBYTE,DWORD);
 BOOL KernelIoControl(DWORD dwIoControlCode, LPVOID lpInBuf, DWORD nInBufSize, LPVOID lpOutBuf, DWORD nOutBufSize, LPDWORD lpBytesReturned);
 
+#define IOCTL_HAL_GET_UUID        CTL_CODE(FILE_DEVICE_HAL, 13, METHOD_BUFFERED, FILE_ANY_ACCESS)
 #define IOCTL_HAL_GET_DEVICEID    CTL_CODE(FILE_DEVICE_HAL, 21, METHOD_BUFFERED, FILE_ANY_ACCESS)
 
 typedef struct _DEVICE_ID {
@@ -72,6 +73,9 @@ typedef struct _DEVICE_ID {
 	DWORD	dwPlatformIDOffset;
 	DWORD	dwPlatformIDBytes;
 } DEVICE_ID, *PDEVICE_ID;
+
+// Other SPI_* definition
+#define SPI_GETUUID 263
 
 /**
  * Missing from wce500 SDK

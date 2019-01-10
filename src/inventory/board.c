@@ -300,31 +300,88 @@ void getBios(void)
 
 }
 
+LPSTR getUUID(BOOL tryDeprecated)
+{
+	int i = 0, uuidlen = sizeof(UUID);
+	LPSTR pos = NULL;
+	BYTE uuid[DEFAULT_BUFSIZE/2];
+	static char strUUID[DEFAULT_BUFSIZE];
+
+	strUUID[0] = '\0';
+
+	if (!SystemParametersInfo(SPI_GETUUID, sizeof(UUID), uuid, 0))
+	{
+		HINSTANCE hCoreDll = NULL;
+		uuidlen = 0;
+
+		if ( GetLastError() != ERROR_INSUFFICIENT_BUFFER )
+		{
+			Error("getUUID: Can't get Platform UUID via SystemParametersInfo");
+		}
+		else
+		{
+			Error("getUUID: Insufficient buffer size for SystemParametersInfo");
+		}
+
+		hCoreDll = LoadLibrary(L"coredll.dll");
+		if (hCoreDll != NULL)
+		{
+			FARPROC GetDeviceUniqueID = NULL;
+			Debug2("Loading GetDeviceUniqueID API...");
+			GetDeviceUniqueID = GetProcAddress( hCoreDll, L"GetDeviceUniqueID" );
+			if (GetDeviceUniqueID == NULL)
+			{
+				DebugError("Can't import GetDeviceUniqueID() API (err=%d)", GetLastError());
+			}
+			else
+			{
+				uuidlen = GETDEVICEUNIQUEID_V1_OUTPUT;
+				if (GetDeviceUniqueID( (LPBYTE)AppName, strlen(AppName), GETDEVICEUNIQUEID_V1, uuid, &uuidlen ) == E_INVALIDARG )
+				{
+					uuidlen = 0;
+					DebugError("Failed to use GetDeviceUniqueID");
+				}
+			}
+			FreeLibrary(hCoreDll);
+		}
+		else
+		{
+			DebugError("Can't load coredll.dll");
+		}
+
+		// Eventually try deprecated method
+		if (tryDeprecated && !uuidlen)
+		{
+			if (KernelIoControl(IOCTL_HAL_GET_UUID, NULL, 0, &uuid, 0, NULL))
+			{
+				uuidlen = 16;
+			}
+			else
+			{
+				DebugError("Deprecated UUID IOCL call failed");
+			}
+		}
+	}
+
+	if (!uuidlen)
+		return NULL;
+
+	Debug2("Computing Device UUID... (size=%d)", uuidlen);
+
+	for ( i=0, pos = strUUID ; i<uuidlen ; pos += 2, i++ )
+		sprintf( pos, "%02x", uuid[i] );
+
+	Debug2("UUID: %s", strUUID);
+
+	return strUUID;
+}
+
 void getHardware(void)
 {
 	LPSTR platform = NULL;
 	OSVERSIONINFO VersionInformation ;
 	LIST *Hardware = NULL;
-	HINSTANCE hCoreDll = NULL;
-	FARPROC GetDeviceUniqueID = NULL;
-	LPSTR Name = NULL;
-
-	BYTE rgDeviceId[GETDEVICEUNIQUEID_V1_OUTPUT];
-	DWORD cbDeviceId = sizeof(rgDeviceId);
-
-	hCoreDll = LoadLibrary(L"coredll.dll");
-	if (hCoreDll != NULL)
-	{
-		Debug2("Loading GetDeviceUniqueID API...");
-		GetDeviceUniqueID = GetProcAddress( hCoreDll, L"GetDeviceUniqueID" );
-		if (GetDeviceUniqueID == NULL)
-		{
-			DebugError("Can't import GetDeviceUniqueID() API");
-			FreeLibrary(hCoreDll);
-		}
-	}
-	else
-		DebugError("Can't load coredll.dll");
+	LPSTR Name = NULL, uuid = NULL;
 
 	// Initialize HARDWARE
 	Hardware = createList("HARDWARE");
@@ -367,19 +424,10 @@ void getHardware(void)
 		free(platform);
 	}
 
-	if ( GetDeviceUniqueID != NULL && GetDeviceUniqueID( (LPBYTE)AppName, strlen(AppName),
-		GETDEVICEUNIQUEID_V1, rgDeviceId, &cbDeviceId ) != E_INVALIDARG )
+	uuid = getUUID(FALSE);
+	if (uuid)
 	{
-		int i = 0;
-		LPSTR uuid = NULL, pos = NULL;
-		Debug("Computing UUID...");
-		uuid = allocate(sizeof(BYTE)*GETDEVICEUNIQUEID_V1_OUTPUT*2 + 1, NULL);
-		for ( i=0, pos = uuid ; i<GETDEVICEUNIQUEID_V1_OUTPUT ; pos += 2, i++ )
-			sprintf( pos, "%02x", rgDeviceId[i] );
 		addField( Hardware, "UUID", uuid );
-		free(uuid);
-		GetDeviceUniqueID = NULL;
-		FreeLibrary(hCoreDll);
 	}
 
 	// Insert it in inventory
