@@ -349,6 +349,40 @@ LPSTR getUUID(BOOL tryDeprecated)
 			DebugError("Can't load coredll.dll");
 		}
 
+		if (!uuidlen)
+		{
+			// Get Motorola UniqueUnitId if available
+			HINSTANCE hOEMDll = LoadLibrary(wMOTOROLA_DLL);
+			if (hOEMDll != NULL)
+			{
+				FARPROC RCM_GetUniqueUnitId = NULL;
+
+				Debug2("Loading Motorola GetUniqueUnitId API...");
+				RCM_GetUniqueUnitId = GetProcAddress( hOEMDll, L"RCM_GetUniqueUnitId" );
+				if (RCM_GetUniqueUnitId == NULL)
+					DebugError("Can't import Motorola GetUniqueUnitId() API");
+				else
+				{
+					DWORD ret;
+					ret = RCM_GetUniqueUnitId( (LPUNITID)&uuid );
+					if (ret != E_RCM_SUCCESS)
+					{
+						DebugError("Motorola GetUniqueUnitId() API returned: %x", ret);
+					}
+					else
+					{
+						uuidlen = sizeof(UNITID);
+					}
+					RCM_GetUniqueUnitId = NULL;
+				}
+
+				// Free DLL
+				FreeLibrary(hOEMDll);
+			}
+			else
+				DebugError("Can't load "sMOTOROLA_DLL" DLL");
+		}
+
 		// Eventually try deprecated method
 		if (!uuidlen)
 		{

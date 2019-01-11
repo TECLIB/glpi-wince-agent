@@ -50,6 +50,11 @@ typedef ELECTRONIC_SERIAL_NUMBER FAR * LPELECTRONIC_SERIAL_NUMBER;
 // Get Electronic Serial Number
 DWORD WINAPI RCM_GetESN(LPELECTRONIC_SERIAL_NUMBER lpESN);	// Pointer to ESN structure to fill
 
+// Get Device Unique ID
+typedef BYTE UNITID[8];
+typedef UNITID FAR * LPUNITID;
+DWORD RCM_GetUniqueUnitId(LPUNITID lpUnitId);
+
 #define VOS_WINDOWSCE					0x00050000L
 
 
