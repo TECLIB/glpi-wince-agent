@@ -1,7 +1,7 @@
 /*
  * GLPI Windows CE Agent
  * 
- * Copyright (C) 2016 - Teclib SAS
+ * Copyright (C) 2019 - Teclib SAS
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -357,31 +357,57 @@ void Quit(void)
 	bInitialized = FALSE;
 }
 
+#define MAX_DEVICEID_LENGTH 32
 static LPSTR computeDeviceID(void)
 {
-	int buflen = 21 ;
-	LPSTR hostname = NULL;
 	LPSYSTEMTIME lpSystemTime = NULL;
 
-	hostname = getHostname();
-	buflen += strlen(hostname);
-
-	DeviceID = allocate( buflen, "DeviceID");
+	DeviceID = allocate( MAX_DEVICEID_LENGTH, "DeviceID");
 
 	lpSystemTime = getLocalTime();
-
-	if (sprintf( DeviceID, "%s-%02d-%02d-%02d-%02d-%02d-%02d", hostname,
+	// Use date base DeviceID only if date time has been updated as older
+	// devices often starts with a default date time
+	if ( lpSystemTime->wYear >= 2019 )
+	{
+		_snprintf(DeviceID, MAX_DEVICEID_LENGTH-1,
+			"WindowsCE-%02d-%02d-%02d-%02d-%02d-%02d",
 			lpSystemTime->wYear,
 			lpSystemTime->wMonth,
 			lpSystemTime->wDay,
 			lpSystemTime->wHour,
 			lpSystemTime->wMinute,
-			lpSystemTime->wSecond) > buflen)
+			lpSystemTime->wSecond);
+	}
+	else
 	{
-		Error("Bad computed DeviceID");
-#ifndef GWA
-		Abort();
+		ULONG tag = 0;
+#ifdef GWA
+		LPSTR uuid = NULL;
+		// As hostname on WinCE devices are not nice enough and localtime is
+		// often also not the real current localtime, we prefer to compute a
+		// simpler deviceid including a tag based on UUID XOR result as UUID
+		// checksum or even a random value.
+		uuid = getUUID(TRUE);
+		if (uuid != NULL)
+		{
+			ULONG l1 = 0, l2 = 0, l3 = 0, l4 = 0;
+			if (sscanf(uuid, "%08lx%08lx%08lx%08lx%08lx", &tag, &l1, &l2, &l3, &l4)>0)
+			{
+				tag ^= l1 ; tag ^= l2 ; tag ^= l3 ; tag ^= l4 ;
+				Debug2("MachineID ? UUID XOR checksum: %08x", tag);
+			}
+		}
+		else
 #endif
+		{
+			Debug2("No uuid to checksum on");
+			srand( GetTickCount() );
+			if (sscanf(vsPrintf("%04x%04x", rand(), rand()), "%08lx", &tag))
+			{
+				Debug2("MachineID ? Random tag: %08x", tag);
+			}
+		}
+		_snprintf(DeviceID, MAX_DEVICEID_LENGTH-1, "WindowsCE-%08x", tag);
 	}
 
 	Debug2("Computed DeviceID=%s", DeviceID);

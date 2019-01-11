@@ -158,6 +158,7 @@ typedef struct _MANUFACTURER {
 	LPCSTR name;
 } MANUFACTURER, *LPMANUFACTURER;
 
+LPSTR getUUID(BOOL tryDeprecated);
 void getBios(void);
 void getHardware(void);
 void CheckDeviceId(LPMANUFACTURER manufacturer, LIST *list);

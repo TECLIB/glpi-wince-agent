@@ -316,11 +316,11 @@ LPSTR getUUID(BOOL tryDeprecated)
 
 		if ( GetLastError() != ERROR_INSUFFICIENT_BUFFER )
 		{
-			Error("getUUID: Can't get Platform UUID via SystemParametersInfo");
+			DebugError("getUUID: Can't get Platform UUID via SystemParametersInfo (err=%d)", GetLastError());
 		}
 		else
 		{
-			Error("getUUID: Insufficient buffer size for SystemParametersInfo");
+			DebugError("getUUID: Insufficient buffer size for SystemParametersInfo");
 		}
 
 		hCoreDll = LoadLibrary(L"coredll.dll");
@@ -350,15 +350,15 @@ LPSTR getUUID(BOOL tryDeprecated)
 		}
 
 		// Eventually try deprecated method
-		if (tryDeprecated && !uuidlen)
+		if (!uuidlen)
 		{
-			if (KernelIoControl(IOCTL_HAL_GET_UUID, NULL, 0, &uuid, 0, NULL))
+			if (KernelIoControl(IOCTL_HAL_GET_UUID, NULL, 0, &uuid, sizeof(UUID), NULL))
 			{
-				uuidlen = 16;
+				uuidlen = sizeof(UUID);
 			}
 			else
 			{
-				DebugError("Deprecated UUID IOCL call failed");
+				DebugError("Deprecated UUID IOCL call failed (%d)", GetLastError());
 			}
 		}
 	}
